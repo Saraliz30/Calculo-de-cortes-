@@ -1590,7 +1590,9 @@
     let rects = '';
     sheet.placed.forEach(p => {
       const ox = pad + p.x*scale, oy = pad + p.y*scale;
-      const iw = p.origW*scale, ih = p.origH*scale;
+     const footW = p.rotated ? p.origH : p.origW;
+const footH = p.rotated ? p.origW : p.origH;
+const iw = footW*scale, ih = footH*scale;
       rects += `<rect x="${ox.toFixed(2)}" y="${oy.toFixed(2)}" width="${iw.toFixed(2)}" height="${ih.toFixed(2)}" fill="${p.color}" stroke="#16232C" stroke-width="0.8"/>`;
       if(iw > 46 && ih > 20){
         rects += `<text x="${(ox+iw/2).toFixed(2)}" y="${(oy+ih/2+4).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#fff" text-anchor="middle" font-weight="600">${fmt(p.origW)}×${fmt(p.origH)}</text>`;
