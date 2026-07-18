@@ -3,26 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora de Cortes — Optimización de Material</title>
+<title>Optimización de Cortes — Aprovechamiento de Material</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#FAFAF7;
-    --paper-line:#EFEBE3;
-    --ink:#16232C;
-    --ink-soft:#5A6B75;
-    --ink-faint:#9AA7AF;
-    --blue:#2C5F8A;
-    --blue-dim:#DCE7EE;
-    --accent:#D9591F;
-    --accent-dim:#F7DFCF;
-    --grid:#D9E1E6;
-    --waste:#C7CDD1;
-    --card:#FFFFFF;
-    --ok:#3B7A57;
-    --err:#B33A2E;
-    --radius:2px;
+    --paper:#E7E8EB;
+    --paper-line:#DDDEE2;
+    --ink:#2B2E33;
+    --ink-soft:#5C6068;
+    --ink-faint:#8D929A;
+    --moss:#4A4F57;
+    --moss-dim:#DADCE0;
+    --accent:#3D434B;
+    --accent-dim:#D9DBDF;
+    --grid:#D3D5D9;
+    --waste:#C7CACE;
+    --card:#E7E8EB;
+    --ok:#4C6B54;
+    --err:#8C4A44;
+    --radius:16px;
+    --font-display:'Big Shoulders Display', sans-serif;
+    --font-hero:'Plus Jakarta Sans', sans-serif;
+    --shadow-light:#FFFFFF;
+    --shadow-dark:#B9BCC2;
   }
   *{box-sizing:border-box;}
   body{
@@ -42,21 +46,19 @@
     padding:0 24px;
   }
 
-  /* ---- Title block, engineering-drawing style ---- */
+  /* ---- Title block, soft neumorphic card ---- */
   .titleblock{
     margin-top:28px;
-    border:1.5px solid var(--ink);
+    position:relative;
+    border:none;
+    border-radius:calc(var(--radius) + 4px);
     background:var(--card);
-    display:grid;
-    grid-template-columns:1.6fr 1fr 1fr 1fr;
-    grid-template-rows:auto auto;
+    box-shadow:10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+    padding:6px 0;
   }
   .titleblock .cell{
-    border-right:1px solid var(--ink);
-    border-bottom:1px solid var(--ink);
-    padding:8px 12px;
+    padding:14px 22px;
   }
-  .titleblock .cell:last-child{border-right:none;}
   .titleblock .big{
     grid-row:span 2;
     display:flex;
@@ -77,14 +79,34 @@
     font-weight:500;
   }
   .titleblock h1{
-    font-size:22px;
+    font-family:var(--font-hero);
+    font-size:36px;
     margin:0 0 4px 0;
-    letter-spacing:-0.01em;
-    font-weight:700;
+    letter-spacing:-0.02em;
+    text-transform:none;
+    font-weight:800;
+    line-height:1;
   }
   .titleblock .sub{
     color:var(--ink-soft);
     font-size:12.5px;
+  }
+  .titleblock .stamp{
+    position:absolute;
+    top:16px;
+    right:18px;
+    background:var(--card);
+    border:none;
+    border-radius:20px;
+    box-shadow:4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+    color:var(--ink-soft);
+    font-family:var(--font-display);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    font-weight:700;
+    padding:5px 14px;
+    transform:none;
   }
 
   /* ---- Sections ---- */
@@ -93,30 +115,36 @@
     display:flex;
     align-items:baseline;
     gap:10px;
-    margin-bottom:12px;
-    border-bottom:1.5px solid var(--ink);
-    padding-bottom:6px;
+    margin-bottom:14px;
+    border-bottom:1px solid var(--paper-line);
+    padding-bottom:8px;
   }
   .section-num{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:12px;
-    color:var(--accent);
-    font-weight:700;
-    border:1px solid var(--accent);
-    padding:1px 6px;
+    font-family:var(--font-display);
+    font-size:14px;
+    color:var(--ink-soft);
+    background:var(--card);
+    box-shadow:3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+    border-radius:8px;
+    font-weight:800;
+    padding:2px 9px 3px;
+    line-height:1.3;
   }
   .section-head h2{
-    font-size:15px;
+    font-family:var(--font-hero);
+    font-size:19px;
     margin:0;
-    text-transform:uppercase;
-    letter-spacing:.04em;
-    font-weight:600;
+    text-transform:none;
+    letter-spacing:-0.01em;
+    font-weight:800;
   }
 
   .panel{
     background:var(--card);
-    border:1px solid var(--ink);
-    padding:18px;
+    border:none;
+    border-radius:var(--radius);
+    box-shadow:8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+    padding:22px;
   }
 
   .field-row{
@@ -166,6 +194,28 @@
     display:none;
   }
   #multiPanelPanel.open{display:block;}
+  .group-head{
+    margin:52px 0 20px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding-bottom:14px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head .section-num{
+    font-size:20px;
+    padding:5px 14px 6px;
+    background:var(--ink);
+    color:#fff;
+    box-shadow:none;
+  }
+  .group-head .group-title{
+    font-family:var(--font-hero);
+    font-size:30px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    color:var(--ink);
+  }
   .tool-divider{
     margin:52px 0 8px;
     display:flex;
@@ -202,7 +252,7 @@
   }
   .sheet-head .sheet-id{font-weight:700;font-size:13.5px;}
   .sheet-head .sheet-meta{font-size:11.5px;color:var(--ink-soft);}
-  .sheet-svg-wrap{width:100%;border:1px solid var(--ink);}
+  .sheet-svg-wrap{width:100%;border-radius:14px;overflow:hidden;box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);}
   .sheet-svg-wrap svg{width:100%;height:auto;display:block;}
   table.costBreakdown{
     width:100%;
@@ -216,7 +266,7 @@
     text-transform:uppercase;
     color:var(--ink-soft);
     padding:6px 8px;
-    border-bottom:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink-faint);
   }
   table.costBreakdown td{
     font-family:'IBM Plex Mono', monospace;
@@ -226,7 +276,7 @@
   }
   table.costBreakdown tfoot td{
     font-weight:700;
-    border-top:1.5px solid var(--ink);
+    border-top:1.5px solid var(--ink-faint);
     border-bottom:none;
   }
   .field{
@@ -246,16 +296,17 @@
     width:100%;
     font-family:'IBM Plex Mono', monospace;
     font-size:14px;
-    padding:8px 9px;
-    border:1px solid #B7C2C9;
-    background:#fff;
+    padding:9px 10px;
+    border:1px solid #CDD0D5;
+    background:var(--paper);
     color:var(--ink);
-    border-radius:var(--radius);
+    border-radius:10px;
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
   }
   .field input:focus, .field select:focus{
-    outline:2px solid var(--blue);
+    outline:2px solid var(--ink);
     outline-offset:1px;
-    border-color:var(--blue);
+    border-color:var(--ink);
   }
   .hint{
     font-size:11.5px;
@@ -277,7 +328,7 @@
     letter-spacing:.05em;
     color:var(--ink-soft);
     padding:6px 8px;
-    border-bottom:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink-faint);
   }
   table.pieces td{
     padding:5px 8px;
@@ -293,7 +344,7 @@
     border-radius:var(--radius);
   }
   table.pieces input:focus{
-    outline:2px solid var(--blue);
+    outline:2px solid var(--moss);
     outline-offset:1px;
   }
   .swatch{
@@ -316,15 +367,17 @@
     font-size:12.5px;
     letter-spacing:.03em;
     text-transform:uppercase;
-    border:1px solid var(--ink);
-    background:#fff;
+    border:none;
+    background:var(--card);
     color:var(--ink);
-    padding:8px 16px;
+    padding:9px 18px;
     cursor:pointer;
-    border-radius:var(--radius);
-    transition:background .12s, color .12s;
+    border-radius:12px;
+    box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+    transition:box-shadow .12s, color .12s;
   }
-  .btn:hover{background:var(--ink);color:#fff;}
+  .btn:hover{color:var(--ink);box-shadow:2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);}
+  .btn:active{box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);}
   .btn-del{
     border:none;
     background:none;
@@ -333,6 +386,7 @@
     cursor:pointer;
     line-height:1;
     padding:4px;
+    box-shadow:none;
   }
   .btn-del:hover{color:var(--err);}
 
@@ -340,13 +394,13 @@
 
   .btn-primary{
     background:var(--accent);
-    border-color:var(--accent);
     color:#fff;
     font-size:14px;
-    padding:13px 26px;
+    padding:14px 28px;
     font-weight:600;
+    box-shadow:5px 5px 12px var(--shadow-dark), -3px -3px 10px var(--shadow-light);
   }
-  .btn-primary:hover{background:#B8481A;border-color:#B8481A;color:#fff;}
+  .btn-primary:hover{background:#2C3138;color:#fff;box-shadow:2px 2px 6px var(--shadow-dark), -1px -1px 5px var(--shadow-light);}
 
   .calc-bar{
     margin-top:22px;
@@ -372,12 +426,14 @@
   .summary-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:1px;
-    background:var(--ink);
-    border:1px solid var(--ink);
+    gap:16px;
+    background:transparent;
+    border:none;
   }
   .summary-card{
     background:var(--card);
+    border-radius:14px;
+    box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
     padding:16px 14px;
   }
   .summary-card .label{
@@ -473,7 +529,7 @@
     margin-top:24px;
     font-family:'IBM Plex Mono', monospace;
     font-size:12px;
-    color:var(--blue);
+    color:var(--moss);
     cursor:pointer;
     text-decoration:underline;
     display:inline-block;
@@ -491,7 +547,7 @@
     text-transform:uppercase;
     color:var(--ink-soft);
     padding:6px 8px;
-    border-bottom:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink-faint);
   }
   table.cutlist td{
     font-family:'IBM Plex Mono', monospace;
@@ -535,23 +591,19 @@
 <div class="sheet">
 
   <div class="titleblock">
+    <div class="stamp">Orden de corte</div>
     <div class="cell big">
-      <h1>Calculadora de Cortes</h1>
-      <div class="sub">Distribución óptima de piezas sobre material lineal</div>
+      <h1>Optimización de cortes</h1>
+      <div class="sub">Calcula cuántas piezas caben en tu material y por dónde cortar — para cortes lineales (tubo, perfil, viga, tabla, cable) y cortes en plano (triplay, tela, lámina).</div>
     </div>
-    <div class="cell"><div class="label">Aplica a</div><div class="value" style="font-size:11.5px;">Tubo · Perfil · Viga · Tabla · Cable</div></div>
-    <div class="cell"><div class="label">Método</div><div class="value" style="font-size:11.5px;">Best-Fit Decreasing</div></div>
-    <div class="cell"><div class="label">Rev.</div><div class="value">01</div></div>
-    <div class="cell"><div class="label">Escala</div><div class="value">Proporcional</div></div>
-    <div class="cell"><div class="label">Unidad</div><div class="value" id="tb-unit">mm</div></div>
-    <div class="cell"><div class="label">Fecha</div><div class="value" id="tb-date">—</div></div>
   </div>
+
+  <div class="group-head"><span class="section-num">01</span><span class="group-title">Cortes lineales</span></div>
 
   <!-- SECTION 1: parámetros generales -->
   <section>
     <div class="section-head">
-      <span class="section-num">01</span>
-      <h2>Parámetros del material</h2>
+      <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
       <div class="param-grid">
@@ -583,8 +635,12 @@
             <option value="ft">ft</option>
           </select>
         </div>
+        <div class="field length-related" id="stockPriceField">
+          <label for="stockPrice">Precio del material (opcional)</label>
+          <input type="number" id="stockPrice" min="0" step="any" placeholder="0.00">
+        </div>
       </div>
-      <p class="hint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente.</p>
+      <p class="hint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente. Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
 
       <div class="toggle-row">
         <input type="checkbox" id="multiLengthToggle">
@@ -613,7 +669,6 @@
   <!-- SECTION 2: piezas -->
   <section>
     <div class="section-head">
-      <span class="section-num">02</span>
       <h2>Piezas requeridas</h2>
     </div>
     <div class="panel">
@@ -642,8 +697,7 @@
   <!-- SECTION 3: resultados -->
   <section id="results">
     <div class="section-head">
-      <span class="section-num">03</span>
-      <h2>Resultado de la optimización</h2>
+      <h2>Resultado: plan de corte</h2>
     </div>
 
     <div class="summary-grid" id="summaryGrid"></div>
@@ -660,15 +714,14 @@
     </table>
   </section>
 
-  <div class="tool-divider"><span>Corte en superficies 2D — triplay, tela, lámina</span></div>
+  <div class="group-head"><span class="section-num">02</span><span class="group-title">Cortes en plano</span></div>
 
   <div id="section2D">
 
   <!-- SECTION 4: parámetros de la plancha -->
   <section>
     <div class="section-head">
-      <span class="section-num">04</span>
-      <h2>Parámetros de la plancha</h2>
+      <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
       <div class="param-grid">
@@ -708,31 +761,12 @@
             <option value="ft">ft</option>
           </select>
         </div>
-      </div>
-      <p class="hint">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha.</p>
-
-      <div class="toggle-row">
-        <input type="checkbox" id="grainToggle" checked>
-        <div class="toggle-text">
-          <label for="grainToggle">Respetar veta / dirección — no rotar piezas 90°</label>
-          <p class="hint">Actívalo para madera (triplay, tablones) cuando todos los rectángulos deben quedar con su lado horizontal paralelo al horizontal de la plancha. Desactívalo para tela o lámina sin dirección, así la calculadora puede rotar piezas 90° si eso aprovecha mejor el material.</p>
+        <div class="field length-related-2d" id="panelPriceField">
+          <label for="panelPrice">Precio de la plancha (opcional)</label>
+          <input type="number" id="panelPrice" min="0" step="any" placeholder="0.00">
         </div>
       </div>
-
-      <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:14px;">
-        <div class="toggle-text" style="width:100%;">
-          <label style="display:block;margin-bottom:8px;">Método de corte</label>
-          <div style="display:flex;gap:20px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="cutMethod2D" value="guillotine" checked style="accent-color:var(--accent);"> Guillotina (corte de lado a lado)
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="cutMethod2D" value="maxrects" style="accent-color:var(--accent);"> Empaquetado libre (mejor aprovechamiento)
-            </label>
-          </div>
-          <p class="hint">Guillotina: cada corte atraviesa toda la plancha, como con sierra de mesa o circular — más realista para taller. Empaquetado libre: acomoda piezas donde mejor quepan, sin esa restricción — más aprovechamiento, pero puede requerir cortes en varias pasadas.</p>
-        </div>
-      </div>
+      <p class="hint">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha. Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
 
       <div class="toggle-row">
         <input type="checkbox" id="multiPanelToggle">
@@ -756,13 +790,35 @@
         </table>
         <button class="btn btn-add" id="addPanelBtn">+ Añadir medida</button>
       </div>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="grainToggle" checked>
+        <div class="toggle-text">
+          <label for="grainToggle">Respetar veta / dirección — no rotar piezas 90°</label>
+          <p class="hint">Actívalo para madera (triplay, tablones) cuando todos los rectángulos deben quedar con su lado horizontal paralelo al horizontal de la plancha. Desactívalo para tela o lámina sin dirección, así la calculadora puede rotar piezas 90° si eso aprovecha mejor el material.</p>
+        </div>
+      </div>
+
+      <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:14px;">
+        <div class="toggle-text" style="width:100%;">
+          <label style="display:block;margin-bottom:8px;">Método de corte</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="cutMethod2D" value="guillotine" checked style="accent-color:var(--accent);"> Guillotina (corte de lado a lado)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="cutMethod2D" value="maxrects" style="accent-color:var(--accent);"> Empaquetado libre (mejor aprovechamiento)
+            </label>
+          </div>
+          <p class="hint">Guillotina: cada corte atraviesa toda la plancha, como con sierra de mesa o circular — más realista para taller. Empaquetado libre: acomoda piezas donde mejor quepan, sin esa restricción — más aprovechamiento, pero puede requerir cortes en varias pasadas.</p>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- SECTION 5: piezas 2D -->
   <section>
     <div class="section-head">
-      <span class="section-num">05</span>
       <h2>Piezas requeridas (rectángulos)</h2>
     </div>
     <div class="panel">
@@ -792,8 +848,7 @@
   <!-- SECTION 6: resultados 2D -->
   <section id="results2D">
     <div class="section-head">
-      <span class="section-num">06</span>
-      <h2>Resultado de la optimización 2D</h2>
+      <h2>Resultado: plano de corte 2D</h2>
     </div>
 
     <div class="summary-grid" id="summaryGrid2D"></div>
@@ -820,7 +875,7 @@
 
 <script>
 (function(){
-  const COLORS = ['#2C5F8A','#D9591F','#3B7A57','#8A5FB0','#B0862C','#4A8FA8','#A85236','#5F7A3B','#7A5F8A','#3B8A7A'];
+  const COLORS = ['#2C5F8A','#3D434B','#3B7A57','#8A5FB0','#B0862C','#4A8FA8','#A85236','#5F7A3B','#7A5F8A','#3B8A7A'];
   const UNIT_TO_MM = { mm:1, cm:10, m:1000, in:25.4, ft:304.8 };
   let pieceRows = []; // {id, label, length, qty}
   let nextId = 1;
@@ -841,7 +896,7 @@
     return value * UNIT_TO_MM[fromUnit] / UNIT_TO_MM[toUnit];
   }
 
-  tbDate.textContent = new Date().toLocaleDateString('es-MX', {year:'numeric', month:'2-digit', day:'2-digit'});
+  if(tbDate) tbDate.textContent = new Date().toLocaleDateString('es-MX', {year:'numeric', month:'2-digit', day:'2-digit'});
 
   function colorFor(label){
     // stable color per unique label, in order of first appearance
@@ -896,7 +951,7 @@
   document.getElementById('addPieceBtn').addEventListener('click', () => addPiece('Pieza ' + (pieceRows.length+1), '', 1));
 
   unitSelect.addEventListener('change', () => {
-    tbUnit.textContent = unitSelect.value;
+    if(tbUnit) tbUnit.textContent = unitSelect.value;
     stockUnitLabel.textContent = unitSelect.value;
   });
 
@@ -1053,13 +1108,13 @@
     bin.items.forEach(item => {
       const w = (item.length / stockLength) * usableW;
       const wTol = (item.effective / stockLength) * usableW;
-      segs += `<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${item.color}" stroke="#16232C" stroke-width="0.6"/>`;
+      segs += `<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${item.color}" stroke="#2B2E33" stroke-width="0.6"/>`;
       if(w > 34){
         segs += `<text x="${x + w/2}" y="${barY + barH/2 + 4}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">${fmt(item.length)}</text>`;
       }
       // tolerance sliver
       if(wTol - w > 0.4){
-        segs += `<rect x="${x+w}" y="${barY}" width="${wTol-w}" height="${barH}" fill="#16232C" opacity="0.35"/>`;
+        segs += `<rect x="${x+w}" y="${barY}" width="${wTol-w}" height="${barH}" fill="#2B2E33" opacity="0.35"/>`;
       }
       // dimension tick
       dims += `<line x1="${x}" y1="${barY+barH+4}" x2="${x}" y2="${barY+barH+10}" stroke="#9AA7AF" stroke-width="1"/>`;
@@ -1071,19 +1126,19 @@
     if(remainW > 0.5){
       segs += `<rect x="${x}" y="${barY}" width="${remainW}" height="${barH}" fill="url(#hatch)" stroke="#9AA7AF" stroke-width="0.6"/>`;
     }
-    dims += `<line x1="${padX}" y1="${barY+barH+4}" x2="${padX}" y2="${barY+barH+10}" stroke="#16232C" stroke-width="1.2"/>`;
-    dims += `<line x1="${W-padX}" y1="${barY+barH+4}" x2="${W-padX}" y2="${barY+barH+10}" stroke="#16232C" stroke-width="1.2"/>`;
-    dims += `<line x1="${padX}" y1="${barY+barH+8}" x2="${W-padX}" y2="${barY+barH+8}" stroke="#16232C" stroke-width="1"/>`;
+    dims += `<line x1="${padX}" y1="${barY+barH+4}" x2="${padX}" y2="${barY+barH+10}" stroke="#2B2E33" stroke-width="1.2"/>`;
+    dims += `<line x1="${W-padX}" y1="${barY+barH+4}" x2="${W-padX}" y2="${barY+barH+10}" stroke="#2B2E33" stroke-width="1.2"/>`;
+    dims += `<line x1="${padX}" y1="${barY+barH+8}" x2="${W-padX}" y2="${barY+barH+8}" stroke="#2B2E33" stroke-width="1"/>`;
     dims += `<text x="${W/2}" y="${barY+barH+22}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#5A6B75" text-anchor="middle">${fmt(stockLength)} ${unit}</text>`;
 
     return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-          <rect width="7" height="7" fill="#EDEFEF"/>
-          <line x1="0" y1="0" x2="0" y2="7" stroke="#C7CDD1" stroke-width="3"/>
+          <rect width="7" height="7" fill="#EFF0F2"/>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#C4C8CD" stroke-width="3"/>
         </pattern>
       </defs>
-      <rect x="${padX}" y="${barY}" width="${usableW}" height="${barH}" fill="none" stroke="#16232C" stroke-width="1.2"/>
+      <rect x="${padX}" y="${barY}" width="${usableW}" height="${barH}" fill="none" stroke="#2B2E33" stroke-width="1.2"/>
       ${segs}
       ${dims}
     </svg>`;
@@ -1183,7 +1238,7 @@
     // legend (unique labels)
     const uniqueLabels = [...new Map(bins.flatMap(b=>b.items).map(it=>[it.label,it])).values()];
     const legendHtml = `<div class="legend">` + uniqueLabels.map(it => `<span class="legend-item"><span class="swatch" style="background:${it.color}"></span>${escapeHtml(it.label)}</span>`).join('') +
-      `<span class="legend-item"><span class="swatch" style="background:#C7CDD1;background-image:repeating-linear-gradient(45deg,#C7CDD1,#C7CDD1 2px,#EDEFEF 2px,#EDEFEF 4px)"></span>Desperdicio</span></div>`;
+      `<span class="legend-item"><span class="swatch" style="background:#C4C8CD;background-image:repeating-linear-gradient(45deg,#C4C8CD,#C4C8CD 2px,#EFF0F2 2px,#EFF0F2 4px)"></span>Desperdicio</span></div>`;
     tubesContainer.insertAdjacentHTML('beforeend', legendHtml);
 
     resultsSection.style.display = 'block';
@@ -1197,10 +1252,11 @@
     const unit = unitSelect.value;
     const toleranceUnit = toleranceUnitSelect.value;
     const tolerance = convert(toleranceRaw, toleranceUnit, unit);
-    const showCost = multiLengthToggle.checked;
+    const singleStockPrice = parseFloat(document.getElementById('stockPrice').value) || 0;
+    const showCost = multiLengthToggle.checked || singleStockPrice > 0;
 
     let stockOptions = [];
-    if(showCost){
+    if(multiLengthToggle.checked){
       stockOptions = stockRows
         .filter(s => parseFloat(s.length) > 0)
         .map(s => ({ length: parseFloat(s.length), price: parseFloat(s.price) || 0 }));
@@ -1216,7 +1272,7 @@
         errBanner.textContent = 'Ingresa una longitud de material válida (mayor a 0).';
         return;
       }
-      stockOptions = [{ length: stockLength, price: 0 }];
+      stockOptions = [{ length: stockLength, price: singleStockPrice }];
     }
 
     const validPieces = pieceRows.filter(p => parseFloat(p.length) > 0 && parseInt(p.qty,10) > 0);
@@ -1590,10 +1646,11 @@
     let rects = '';
     sheet.placed.forEach(p => {
       const ox = pad + p.x*scale, oy = pad + p.y*scale;
-     const footW = p.rotated ? p.origH : p.origW;
-const footH = p.rotated ? p.origW : p.origH;
-const iw = footW*scale, ih = footH*scale;
-      rects += `<rect x="${ox.toFixed(2)}" y="${oy.toFixed(2)}" width="${iw.toFixed(2)}" height="${ih.toFixed(2)}" fill="${p.color}" stroke="#16232C" stroke-width="0.8"/>`;
+      // Si la pieza está girada, su hueco en la plancha mide origH×origW (no origW×origH).
+      const footW = p.rotated ? p.origH : p.origW;
+      const footH = p.rotated ? p.origW : p.origH;
+      const iw = footW*scale, ih = footH*scale;
+      rects += `<rect x="${ox.toFixed(2)}" y="${oy.toFixed(2)}" width="${iw.toFixed(2)}" height="${ih.toFixed(2)}" fill="${p.color}" stroke="#2B2E33" stroke-width="0.8"/>`;
       if(iw > 46 && ih > 20){
         rects += `<text x="${(ox+iw/2).toFixed(2)}" y="${(oy+ih/2+4).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#fff" text-anchor="middle" font-weight="600">${fmt(p.origW)}×${fmt(p.origH)}</text>`;
       }
@@ -1616,8 +1673,8 @@ const iw = footW*scale, ih = footH*scale;
           x2 = x1;                  y2 = pad + c.to*scale;
           mx = x1; my = y1 + 12;
         }
-        cutLines += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#D9591F" stroke-width="1.3" stroke-dasharray="5,3"/>`;
-        cutLines += `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="7.5" fill="#D9591F"/>`;
+        cutLines += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#3D434B" stroke-width="1.3" stroke-dasharray="5,3"/>`;
+        cutLines += `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="7.5" fill="#3D434B"/>`;
         cutLines += `<text x="${mx.toFixed(2)}" y="${(my+3).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#fff" text-anchor="middle" font-weight="700">${order}</text>`;
       });
     }
@@ -1625,11 +1682,11 @@ const iw = footW*scale, ih = footH*scale;
     return `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <pattern id="hatch2d" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-          <rect width="7" height="7" fill="#EDEFEF"/>
-          <line x1="0" y1="0" x2="0" y2="7" stroke="#C7CDD1" stroke-width="3"/>
+          <rect width="7" height="7" fill="#EFF0F2"/>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#C4C8CD" stroke-width="3"/>
         </pattern>
       </defs>
-      <rect x="${pad}" y="${pad}" width="${(sheet.width*scale).toFixed(2)}" height="${(sheet.height*scale).toFixed(2)}" fill="url(#hatch2d)" stroke="#16232C" stroke-width="1.4"/>
+      <rect x="${pad}" y="${pad}" width="${(sheet.width*scale).toFixed(2)}" height="${(sheet.height*scale).toFixed(2)}" fill="url(#hatch2d)" stroke="#2B2E33" stroke-width="1.4"/>
       ${rects}
       ${cutLines}
     </svg>`;
@@ -1728,8 +1785,8 @@ const iw = footW*scale, ih = footH*scale;
 
     const uniqueLabels = [...new Map(sheets.flatMap(sh => sh.placed).map(p => [p.label, p])).values()];
     const legendHtml = `<div class="legend">` + uniqueLabels.map(p => `<span class="legend-item"><span class="swatch" style="background:${p.color}"></span>${escapeHtml(p.label)}</span>`).join('') +
-      `<span class="legend-item"><span class="swatch" style="background:#C7CDD1;background-image:repeating-linear-gradient(45deg,#C7CDD1,#C7CDD1 2px,#EDEFEF 2px,#EDEFEF 4px)"></span>Desperdicio</span>` +
-      (method === 'guillotine' ? `<span class="legend-item"><span class="swatch" style="background:#D9591F"></span>Línea de corte (número = orden)</span>` : '') +
+      `<span class="legend-item"><span class="swatch" style="background:#C4C8CD;background-image:repeating-linear-gradient(45deg,#C4C8CD,#C4C8CD 2px,#EFF0F2 2px,#EFF0F2 4px)"></span>Desperdicio</span>` +
+      (method === 'guillotine' ? `<span class="legend-item"><span class="swatch" style="background:#3D434B"></span>Línea de corte (número = orden)</span>` : '') +
       `</div>`;
     sheetsContainer.insertAdjacentHTML('beforeend', legendHtml);
 
@@ -1744,12 +1801,13 @@ const iw = footW*scale, ih = footH*scale;
     const unit = unit2DSelect.value;
     const toleranceUnit = toleranceUnit2DSelect.value;
     const tolerance = convert(toleranceRaw, toleranceUnit, unit);
-    const showCost = multiPanelToggle.checked;
+    const singlePanelPrice = parseFloat(document.getElementById('panelPrice').value) || 0;
+    const showCost = multiPanelToggle.checked || singlePanelPrice > 0;
     const allowRotate = !grainToggle.checked;
     const method = document.querySelector('input[name="cutMethod2D"]:checked').value;
 
     let panelOptions = [];
-    if(showCost){
+    if(multiPanelToggle.checked){
       panelOptions = panelRows
         .filter(s => parseFloat(s.width) > 0 && parseFloat(s.height) > 0)
         .map(s => ({ width: parseFloat(s.width), height: parseFloat(s.height), price: parseFloat(s.price) || 0 }));
@@ -1766,7 +1824,7 @@ const iw = footW*scale, ih = footH*scale;
         errBanner2D.textContent = 'Ingresa un ancho y alto de plancha válidos (mayores a 0).';
         return;
       }
-      panelOptions = [{ width: w, height: h, price: 0 }];
+      panelOptions = [{ width: w, height: h, price: singlePanelPrice }];
     }
 
     const validPieces = pieceRows2D.filter(p => parseFloat(p.width) > 0 && parseFloat(p.height) > 0 && parseInt(p.qty,10) > 0);
