@@ -14,11 +14,8 @@
     --ink-soft:#5C6068;
     --ink-faint:#8D929A;
     --moss:#4A4F57;
-    --moss-dim:#DADCE0;
     --accent:#3D434B;
-    --accent-dim:#D9DBDF;
     --grid:#D3D5D9;
-    --waste:#C7CACE;
     --card:#E7E8EB;
     --ok:#4C6B54;
     --err:#8C4A44;
@@ -91,23 +88,6 @@
     color:var(--ink-soft);
     font-size:12.5px;
   }
-  .titleblock .stamp{
-    position:absolute;
-    top:16px;
-    right:18px;
-    background:var(--card);
-    border:none;
-    border-radius:20px;
-    box-shadow:4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
-    color:var(--ink-soft);
-    font-family:var(--font-display);
-    font-size:11px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    font-weight:700;
-    padding:5px 14px;
-    transform:none;
-  }
 
   /* ---- Sections ---- */
   section{margin-top:26px;}
@@ -147,11 +127,6 @@
     padding:22px;
   }
 
-  .field-row{
-    display:flex;
-    gap:16px;
-    flex-wrap:wrap;
-  }
   .param-grid{
     display:grid;
     grid-template-columns:2fr 1fr;
@@ -215,25 +190,6 @@
     font-weight:800;
     letter-spacing:-0.02em;
     color:var(--ink);
-  }
-  .tool-divider{
-    margin:52px 0 8px;
-    display:flex;
-    align-items:center;
-    gap:14px;
-  }
-  .tool-divider::before, .tool-divider::after{
-    content:'';
-    flex:1;
-    border-top:1.5px dashed var(--ink-faint);
-  }
-  .tool-divider span{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:11.5px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    color:var(--ink-soft);
-    white-space:nowrap;
   }
   .sheet-block{
     margin-top:22px;
@@ -355,12 +311,6 @@
   .col-len{width:110px;}
   .col-del{width:36px;text-align:center;}
   .row-err td{background:#FCEBE8;}
-  .piece-error{
-    color:var(--err);
-    font-size:11px;
-    font-family:'IBM Plex Mono',monospace;
-    margin-top:2px;
-  }
 
   .btn{
     font-family:'IBM Plex Mono', monospace;
@@ -574,8 +524,6 @@
   }
 
   @media (max-width:700px){
-    .titleblock{grid-template-columns:1fr 1fr;}
-    .titleblock .big{grid-column:span 2;}
     .summary-grid{grid-template-columns:1fr 1fr;}
     .col-color{display:none;}
   }
@@ -884,8 +832,6 @@
   const piecesBody = document.getElementById('piecesBody');
   const unitSelect = document.getElementById('unit');
   const toleranceUnitSelect = document.getElementById('toleranceUnit');
-  const tbUnit = document.getElementById('tb-unit');
-  const tbDate = document.getElementById('tb-date');
   const multiLengthToggle = document.getElementById('multiLengthToggle');
   const multiLengthPanel = document.getElementById('multiLengthPanel');
   const stockOptsBody = document.getElementById('stockOptsBody');
@@ -894,8 +840,6 @@
   function convert(value, fromUnit, toUnit){
     return value * UNIT_TO_MM[fromUnit] / UNIT_TO_MM[toUnit];
   }
-
-  if(tbDate) tbDate.textContent = new Date().toLocaleDateString('es-MX', {year:'numeric', month:'2-digit', day:'2-digit'});
 
   function colorFor(label){
     // stable color per unique label, in order of first appearance
@@ -950,7 +894,6 @@
   document.getElementById('addPieceBtn').addEventListener('click', () => addPiece('Pieza ' + (pieceRows.length+1), '', 1));
 
   unitSelect.addEventListener('change', () => {
-    if(tbUnit) tbUnit.textContent = unitSelect.value;
     stockUnitLabel.textContent = unitSelect.value;
   });
 
@@ -1295,9 +1238,9 @@
   document.getElementById('calcBtn').addEventListener('click', calculate);
 
   document.getElementById('cutlistToggle').addEventListener('click', function(){
-    const t = document.getElementById('cutlistTable');
-    const isHidden = t.style.display !== 'table';
-    t.style.display = isHidden ? 'table' : 'none';
+    const cutlistTableEl = document.getElementById('cutlistTable');
+    const isHidden = cutlistTableEl.style.display !== 'table';
+    cutlistTableEl.style.display = isHidden ? 'table' : 'none';
     this.textContent = (isHidden ? '▾' : '▸') + ' Ver lista de corte en formato tabla (para imprimir)';
   });
 
@@ -1846,9 +1789,9 @@
   document.getElementById('calc2DBtn').addEventListener('click', calculate2D);
 
   document.getElementById('cutlistToggle2D').addEventListener('click', function(){
-    const t = document.getElementById('cutlistTable2D');
-    const isHidden = t.style.display !== 'table';
-    t.style.display = isHidden ? 'table' : 'none';
+    const cutlistTable2DEl = document.getElementById('cutlistTable2D');
+    const isHidden = cutlistTable2DEl.style.display !== 'table';
+    cutlistTable2DEl.style.display = isHidden ? 'table' : 'none';
     this.textContent = (isHidden ? '▾' : '▸') + ' Ver lista de corte en formato tabla (para imprimir)';
   });
 
