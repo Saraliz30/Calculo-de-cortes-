@@ -951,24 +951,30 @@
 
   // ---------- ALGORITHM: Best-Fit Decreasing bin packing (1D cutting stock) ----------
   // stockOptions: [{length, price}] — one or more available material lengths, each with its price.
-  function packWithStrategy(stockOptions, items, chooseFn){
+  function packWithStrategy(stockOptions, items, chooseFn, tolerance){
     let bins = [];
     items.forEach(item => {
       let best = null;
       let bestRemaining = Infinity;
       for(const bin of bins){
-        if(bin.remaining >= item.effective - 1e-9 && bin.remaining < bestRemaining){
+        // Solo se cobra la tolerancia (kerf) si ya hay una pieza antes en la barra:
+        // el corte que separa esta pieza de la anterior sí gasta material,
+        // pero la última pieza de la barra no necesita un corte extra reservado
+        // de antemano — el sobrante que quede después de ella es simplemente desperdicio.
+        const needed = item.length + (bin.items.length > 0 ? tolerance : 0);
+        if(bin.remaining >= needed - 1e-9 && bin.remaining < bestRemaining){
           best = bin;
           bestRemaining = bin.remaining;
         }
       }
       if(best){
+        const needed = item.length + (best.items.length > 0 ? tolerance : 0);
         best.items.push(item);
-        best.remaining -= item.effective;
+        best.remaining -= needed;
       } else {
-        const candidates = stockOptions.filter(s => s.length >= item.effective - 1e-9);
+        const candidates = stockOptions.filter(s => s.length >= item.length - 1e-9);
         const chosen = chooseFn(candidates);
-        bins.push({ stockLength: chosen.length, price: chosen.price, remaining: chosen.length - item.effective, items: [item] });
+        bins.push({ stockLength: chosen.length, price: chosen.price, remaining: chosen.length - item.length, items: [item] });
       }
     });
     return bins;
@@ -986,7 +992,7 @@
       const qty = parseInt(p.qty, 10);
       if(!len || len <= 0 || !qty || qty <= 0) return;
       for(let i=0;i<qty;i++){
-        items.push({ label: p.label || 'Sin nombre', length: len, effective: len + parseFloat(tolerance||0), color: colorFor(p.label) });
+        items.push({ label: p.label || 'Sin nombre', length: len, color: colorFor(p.label) });
       }
     });
 
@@ -995,14 +1001,14 @@
     }
 
     const maxStock = Math.max(...stockOptions.map(s => s.length));
-    const oversized = items.filter(it => it.effective > maxStock + 1e-9);
+    const oversized = items.filter(it => it.length > maxStock + 1e-9);
     if(oversized.length){
       const names = [...new Set(oversized.map(o=>o.label))].join(', ');
-      throw {type:'oversized', message:`Estas piezas no caben ni en la longitud de material más larga disponible (${maxStock}), considerando la tolerancia: ${names}.`};
+      throw {type:'oversized', message:`Estas piezas no caben ni en la longitud de material más larga disponible (${maxStock}): ${names}.`};
     }
 
-    // Sort descending by effective length (Decreasing)
-    items.sort((a,b) => b.effective - a.effective);
+    // Sort descending by length (Decreasing)
+    items.sort((a,b) => b.length - a.length);
 
     // Try a few strategies for choosing which stock length to open when none of the
     // currently open bins fit, and keep whichever gives the lowest total cost.
@@ -1016,7 +1022,7 @@
     let bestBins = null;
     let bestCost = Infinity;
     strategies.forEach(fn => {
-      const bins = packWithStrategy(stockOptions, items, fn);
+      const bins = packWithStrategy(stockOptions, items, fn, tolerance);
       const cost = binsTotalCost(bins);
       if(cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && (!bestBins || bins.length < bestBins.length))){
         bestBins = bins;
@@ -1039,7 +1045,7 @@
     return (Math.round(n * 100)/100).toString();
   }
 
-  function buildTubeSVG(bin, unit){
+  function buildTubeSVG(bin, unit, tolerance){
     const stockLength = bin.stockLength;
     const W = 1000, H = 78;
     const padX = 4, barY = 14, barH = 34;
@@ -1047,14 +1053,16 @@
     let x = padX;
     let segs = '';
     let dims = '';
-    bin.items.forEach(item => {
+    bin.items.forEach((item, idx) => {
+      const isLast = idx === bin.items.length - 1;
       const w = (item.length / stockLength) * usableW;
-      const wTol = (item.effective / stockLength) * usableW;
+      const effectiveLen = isLast ? item.length : item.length + tolerance;
+      const wTol = (effectiveLen / stockLength) * usableW;
       segs += `<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${item.color}" stroke="#2B2E33" stroke-width="0.6"/>`;
       if(w > 34){
         segs += `<text x="${x + w/2}" y="${barY + barH/2 + 4}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">${fmt(item.length)}</text>`;
       }
-      // tolerance sliver
+      // tolerance sliver (solo si hay otra pieza después en la misma barra)
       if(wTol - w > 0.4){
         segs += `<rect x="${x+w}" y="${barY}" width="${wTol-w}" height="${barH}" fill="#2B2E33" opacity="0.35"/>`;
       }
@@ -1086,7 +1094,7 @@
     </svg>`;
   }
 
-  function render(bins, unit, showCost, maxStockAvailable){
+  function render(bins, unit, showCost, maxStockAvailable, tolerance){
     const currency = '$';
     errBanner.style.display = 'none';
     const oldBreakdown = document.getElementById('costBreakdownWrap');
@@ -1097,7 +1105,9 @@
     const totalUsedMaterial = bins.reduce((s,b)=>s+b.stockLength,0);
     const totalWaste = bins.reduce((s,b)=>s+b.remaining,0);
     const efficiency = 100 * (1 - totalWaste/totalUsedMaterial);
-    const totalDemandLength = bins.reduce((s,b)=>s + b.items.reduce((s2,it)=>s2+it.effective,0), 0);
+    // Demanda real = lo que cada barra efectivamente consumió (largo de barra − sobrante),
+    // que ya refleja que la última pieza de cada barra no carga tolerancia extra.
+    const totalDemandLength = bins.reduce((s,b)=> s + (b.stockLength - b.remaining), 0);
     const lowerBound = Math.ceil(totalDemandLength / maxStockAvailable);
     const totalCost = binsTotalCost(bins);
 
@@ -1164,13 +1174,14 @@
           <span class="tube-id">BARRA ${i+1} / ${bins.length} — ${fmt(bin.stockLength)} ${unit}${showCost ? ' · ' + currency + fmt(bin.price) : ''}</span>
           <span class="tube-meta">usado ${fmt(used)} ${unit} · desperdicio ${fmt(bin.remaining)} ${unit} (${fmt(wastePct)}%)</span>
         </div>
-        <div class="tube-svg-wrap">${buildTubeSVG(bin, unit)}</div>
+        <div class="tube-svg-wrap">${buildTubeSVG(bin, unit, tolerance)}</div>
       `;
       tubesContainer.appendChild(div);
 
       let cum = 0;
-      bin.items.forEach(item => {
-        cum += item.effective;
+      bin.items.forEach((item, idx) => {
+        if(idx > 0) cum += tolerance;
+        cum += item.length;
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${i+1}</td><td><span class="swatch" style="background:${item.color}"></span>${escapeHtml(item.label)}</td><td>${fmt(item.length)} ${unit}</td><td>${fmt(cum)} ${unit}</td>`;
         cutlistBody.appendChild(tr);
@@ -1227,7 +1238,7 @@
     try{
       const bins = optimizeCuts(stockOptions, tolerance, validPieces);
       const maxStockAvailable = Math.max(...stockOptions.map(s=>s.length));
-      render(bins, unit, showCost, maxStockAvailable);
+      render(bins, unit, showCost, maxStockAvailable, tolerance);
     } catch(e){
       errBanner.style.display = 'block';
       errBanner.textContent = e.message || 'No fue posible calcular la distribución.';
@@ -1396,24 +1407,35 @@
   // Guillotine packing: Best-Area-Fit placement + Shorter-Leftover-Axis split.
   // Every split is a straight cut across the whole free rectangle — matches how
   // a table saw or panel saw actually cuts a sheet.
-  function packGuillotine(panelOptions, items, chooseFn, allowRotate){
+  function packGuillotine(panelOptions, items, chooseFn, allowRotate, tolerance){
     let sheets = [];
 
     function tryPlace(sheet, item){
       let best = null, bestScore = Infinity, bestRot = false;
       sheet.free.forEach(fr => {
-        if(item.w <= fr.w + 1e-9 && item.h <= fr.h + 1e-9){
-          const leftover = fr.w*fr.h - item.w*item.h;
+        if(item.origW <= fr.w + 1e-9 && item.origH <= fr.h + 1e-9){
+          const leftover = fr.w*fr.h - item.origW*item.origH;
           if(leftover < bestScore){ bestScore = leftover; best = fr; bestRot = false; }
         }
-        if(allowRotate && item.h <= fr.w + 1e-9 && item.w <= fr.h + 1e-9){
-          const leftover = fr.w*fr.h - item.w*item.h;
+        if(allowRotate && item.origH <= fr.w + 1e-9 && item.origW <= fr.h + 1e-9){
+          const leftover = fr.w*fr.h - item.origW*item.origH;
           if(leftover < bestScore){ bestScore = leftover; best = fr; bestRot = true; }
         }
       });
       if(!best) return false;
-      const iw = bestRot ? item.h : item.w;
-      const ih = bestRot ? item.w : item.h;
+      const rawW = bestRot ? item.origH : item.origW;
+      const rawH = bestRot ? item.origW : item.origH;
+
+      // La tolerancia (kerf) solo se reserva hacia la derecha/abajo si de verdad
+      // sobra material ahí dentro de este hueco libre. Si la pieza ya llega justo
+      // al borde del hueco (que es el borde real de la plancha o un corte ya hecho),
+      // no hace falta un corte extra. Si sobra menos que la tolerancia completa,
+      // solo se cuenta ese sobrante mínimo — no se exige la tolerancia entera.
+      const marginW = Math.min(tolerance, Math.max(0, best.w - rawW));
+      const marginH = Math.min(tolerance, Math.max(0, best.h - rawH));
+      const iw = rawW + marginW;
+      const ih = rawH + marginH;
+
       const placed = { label: item.label, color: item.color, origW: item.origW, origH: item.origH, x: best.x, y: best.y, w: iw, h: ih, rotated: bestRot };
       sheet.placed.push(placed);
 
@@ -1452,8 +1474,8 @@
       }
       if(!placedOk){
         const candidates = panelOptions.filter(o =>
-          (item.w <= o.width + 1e-9 && item.h <= o.height + 1e-9) ||
-          (allowRotate && item.h <= o.width + 1e-9 && item.w <= o.height + 1e-9)
+          (item.origW <= o.width + 1e-9 && item.origH <= o.height + 1e-9) ||
+          (allowRotate && item.origH <= o.width + 1e-9 && item.origW <= o.height + 1e-9)
         );
         const chosen = chooseFn(candidates);
         const sheet = { width: chosen.width, height: chosen.height, price: chosen.price, free: [{x:0,y:0,w:chosen.width,h:chosen.height}], placed: [], cuts: [] };
@@ -1467,7 +1489,7 @@
   // Free packing (MaxRects, Best-Short-Side-Fit): places pieces wherever they fit
   // best, splitting all overlapping free rectangles into up to 4 new ones. Gives
   // denser packing but cuts are not guaranteed edge-to-edge — meant for laser/plotter.
-  function packMaxRects(panelOptions, items, chooseFn, allowRotate){
+  function packMaxRects(panelOptions, items, chooseFn, allowRotate, tolerance){
     let sheets = [];
 
     function splitFree(sheet, placedRect){
@@ -1487,20 +1509,28 @@
     function tryPlace(sheet, item){
       let best = null, bestShort = Infinity, bestLong = Infinity, bestRot = false;
       sheet.free.forEach(fr => {
-        if(item.w <= fr.w+1e-9 && item.h <= fr.h+1e-9){
-          const short = Math.min(fr.w-item.w, fr.h-item.h);
-          const long = Math.max(fr.w-item.w, fr.h-item.h);
+        if(item.origW <= fr.w+1e-9 && item.origH <= fr.h+1e-9){
+          const short = Math.min(fr.w-item.origW, fr.h-item.origH);
+          const long = Math.max(fr.w-item.origW, fr.h-item.origH);
           if(short < bestShort || (short===bestShort && long<bestLong)){ bestShort=short; bestLong=long; best=fr; bestRot=false; }
         }
-        if(allowRotate && item.h <= fr.w+1e-9 && item.w <= fr.h+1e-9){
-          const short = Math.min(fr.w-item.h, fr.h-item.w);
-          const long = Math.max(fr.w-item.h, fr.h-item.w);
+        if(allowRotate && item.origH <= fr.w+1e-9 && item.origW <= fr.h+1e-9){
+          const short = Math.min(fr.w-item.origH, fr.h-item.origW);
+          const long = Math.max(fr.w-item.origH, fr.h-item.origW);
           if(short < bestShort || (short===bestShort && long<bestLong)){ bestShort=short; bestLong=long; best=fr; bestRot=true; }
         }
       });
       if(!best) return false;
-      const iw = bestRot ? item.h : item.w;
-      const ih = bestRot ? item.w : item.h;
+      const rawW = bestRot ? item.origH : item.origW;
+      const rawH = bestRot ? item.origW : item.origH;
+
+      // Mismo criterio que en guillotina: la tolerancia solo se reserva por el
+      // sobrante real disponible en el hueco elegido, nunca más de lo que sobra.
+      const marginW = Math.min(tolerance, Math.max(0, best.w - rawW));
+      const marginH = Math.min(tolerance, Math.max(0, best.h - rawH));
+      const iw = rawW + marginW;
+      const ih = rawH + marginH;
+
       const placed = { label: item.label, color: item.color, origW: item.origW, origH: item.origH, x: best.x, y: best.y, w: iw, h: ih, rotated: bestRot };
       sheet.placed.push(placed);
       splitFree(sheet, placed);
@@ -1514,8 +1544,8 @@
       }
       if(!placedOk){
         const candidates = panelOptions.filter(o =>
-          (item.w <= o.width + 1e-9 && item.h <= o.height + 1e-9) ||
-          (allowRotate && item.h <= o.width + 1e-9 && item.w <= o.height + 1e-9)
+          (item.origW <= o.width + 1e-9 && item.origH <= o.height + 1e-9) ||
+          (allowRotate && item.origH <= o.width + 1e-9 && item.origW <= o.height + 1e-9)
         );
         const chosen = chooseFn(candidates);
         const sheet = { width: chosen.width, height: chosen.height, price: chosen.price, free: [{x:0,y:0,w:chosen.width,h:chosen.height}], placed: [] };
@@ -1536,7 +1566,7 @@
       const w = parseFloat(p.width), h = parseFloat(p.height), qty = parseInt(p.qty, 10);
       if(!w || w <= 0 || !h || h <= 0 || !qty || qty <= 0) return;
       for(let i = 0; i < qty; i++){
-        items.push({ label: p.label || 'Sin nombre', w: w + tolerance, h: h + tolerance, origW: w, origH: h, color: colorFor2D(p.label) });
+        items.push({ label: p.label || 'Sin nombre', origW: w, origH: h, color: colorFor2D(p.label) });
       }
     });
 
@@ -1544,17 +1574,19 @@
       throw { message: 'Agrega al menos una pieza con ancho, alto y cantidad válidos.' };
     }
 
+    // Una pieza sola nunca necesita tolerancia extra: si mide justo lo mismo (o casi)
+    // que la plancha, solo debe caber su medida real, sin exigir margen de corte.
     const fitsTest = it => panelOptions.some(o =>
-      (it.w <= o.width + 1e-9 && it.h <= o.height + 1e-9) || (allowRotate && it.h <= o.width + 1e-9 && it.w <= o.height + 1e-9)
+      (it.origW <= o.width + 1e-9 && it.origH <= o.height + 1e-9) || (allowRotate && it.origH <= o.width + 1e-9 && it.origW <= o.height + 1e-9)
     );
     const bad = items.filter(it => !fitsTest(it));
     if(bad.length){
       const names = [...new Set(bad.map(o => o.label))].join(', ');
-      throw { message: `Estas piezas no caben en ninguna medida de plancha disponible, considerando la tolerancia${allowRotate ? '' : ' (la veta no permite rotarlas)'}: ${names}.` };
+      throw { message: `Estas piezas no caben en ninguna medida de plancha disponible${allowRotate ? '' : ' (la veta no permite rotarlas)'}: ${names}.` };
     }
 
     // Sort by decreasing area, then by longer side — standard nesting order.
-    items.sort((a,b) => (b.w*b.h) - (a.w*a.h) || Math.max(b.w,b.h) - Math.max(a.w,a.h));
+    items.sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH) || Math.max(b.origW,b.origH) - Math.max(a.origW,a.origH));
 
     const packFn = method === 'guillotine' ? packGuillotine : packMaxRects;
 
@@ -1567,7 +1599,7 @@
 
     let bestSheets = null, bestCost = Infinity;
     strategies.forEach(fn => {
-      const sheets = packFn(panelOptions, items, fn, allowRotate);
+      const sheets = packFn(panelOptions, items, fn, allowRotate, tolerance);
       const cost = sheetsTotalCost(sheets);
       if(cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && (!bestSheets || sheets.length < bestSheets.length))){
         bestSheets = sheets;
