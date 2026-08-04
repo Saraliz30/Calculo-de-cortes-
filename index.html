@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Optimización de Cortes — Aprovechamiento de Material</title>
+<meta name="description" content="Calculadora gratuita para optimizar cortes de material: calcula cuántas piezas caben en tu tubo, perfil, viga, tabla o triplay y por dónde cortar para desperdiciar lo menos posible.">
+<meta name="keywords" content="optimización de cortes, calculadora de cortes, cutting stock, aprovechamiento de material, corte de triplay, corte de tubo, nesting">
+<meta property="og:title" content="Optimización de Cortes — Aprovechamiento de Material">
+<meta property="og:description" content="Calcula cuántas piezas caben en tu material y por dónde cortar, para cortes lineales y cortes en plano.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
@@ -541,7 +546,7 @@
   <div class="titleblock">
     <div class="cell big">
       <h1>Optimización de cortes</h1>
-      <div class="sub">Calcula de manera eficiente los cortes que necesitas realizar — para cortes lineales (tubo, perfil, viga, tabla, cable) y cortes en plano (triplay, tela, lámina).</div>
+      <div class="sub">Calcula cuántas piezas caben en tu material y por dónde cortar — para cortes lineales (tubo, perfil, viga, tabla, cable) y cortes en plano (triplay, tela, lámina).</div>
     </div>
   </div>
 
@@ -1489,7 +1494,8 @@
   // Free packing (MaxRects, Best-Short-Side-Fit): places pieces wherever they fit
   // best, splitting all overlapping free rectangles into up to 4 new ones. Gives
   // denser packing but cuts are not guaranteed edge-to-edge — meant for laser/plotter.
-  function packMaxRects(panelOptions, items, chooseFn, allowRotate, tolerance){
+  function packMaxRects(panelOptions, items, chooseFn, allowRotate, tolerance, rule){
+    rule = rule || 'bssf';
     let sheets = [];
 
     function splitFree(sheet, placedRect){
@@ -1506,19 +1512,33 @@
       sheet.free = pruneFree(newFree);
     }
 
+    // Puntuación de qué tan "bueno" es meter la pieza (rawW x rawH) en el
+    // hueco libre fr, según la regla elegida. Se compara (primary, secondary)
+    // como par — el menor primary gana, y secondary solo desempata.
+    function score(fr, rawW, rawH){
+      const leftW = fr.w - rawW, leftH = fr.h - rawH;
+      if(rule === 'blsf'){        // Best-Long-Side-Fit: prioriza dejar chico el sobrante largo
+        return [Math.max(leftW, leftH), Math.min(leftW, leftH)];
+      } else if(rule === 'baf'){  // Best-Area-Fit: prioriza el hueco con menos área sobrante
+        return [fr.w*fr.h - rawW*rawH, Math.min(leftW, leftH)];
+      } else if(rule === 'bl'){   // Bottom-Left: siempre el hueco más arriba-a-la-izquierda
+        return [fr.y, fr.x];
+      }
+      return [Math.min(leftW, leftH), Math.max(leftW, leftH)]; // bssf (por defecto)
+    }
+
     function tryPlace(sheet, item){
-      let best = null, bestShort = Infinity, bestLong = Infinity, bestRot = false;
+      let best = null, bestP = Infinity, bestS = Infinity, bestRot = false;
+      function consider(fr, rawW, rawH, rot){
+        if(rawW > fr.w+1e-9 || rawH > fr.h+1e-9) return;
+        const [p, s] = score(fr, rawW, rawH);
+        if(p < bestP - 1e-9 || (Math.abs(p-bestP) < 1e-9 && s < bestS - 1e-9)){
+          bestP = p; bestS = s; best = fr; bestRot = rot;
+        }
+      }
       sheet.free.forEach(fr => {
-        if(item.origW <= fr.w+1e-9 && item.origH <= fr.h+1e-9){
-          const short = Math.min(fr.w-item.origW, fr.h-item.origH);
-          const long = Math.max(fr.w-item.origW, fr.h-item.origH);
-          if(short < bestShort || (short===bestShort && long<bestLong)){ bestShort=short; bestLong=long; best=fr; bestRot=false; }
-        }
-        if(allowRotate && item.origH <= fr.w+1e-9 && item.origW <= fr.h+1e-9){
-          const short = Math.min(fr.w-item.origH, fr.h-item.origW);
-          const long = Math.max(fr.w-item.origH, fr.h-item.origW);
-          if(short < bestShort || (short===bestShort && long<bestLong)){ bestShort=short; bestLong=long; best=fr; bestRot=true; }
-        }
+        consider(fr, item.origW, item.origH, false);
+        if(allowRotate) consider(fr, item.origH, item.origW, true);
       });
       if(!best) return false;
       const rawW = bestRot ? item.origH : item.origW;
@@ -1597,14 +1617,36 @@
       candidates => candidates.reduce((a,b) => ((b.width*b.height) > (a.width*a.height) ? b : a)), // largest area available
     ];
 
+    // Cuando hay empate entre dejar una pieza como está o rotarla (pasa seguido,
+    // porque el área es la misma), el algoritmo greedy siempre prefiere dejarla
+    // tal cual se capturó — y esa primera decisión cambia todo el acomodo que
+    // viene después. Para no depender de si el usuario escribió "3.5 × 2" o
+    // "2 × 3.5", probamos el empaquetado completo también con todas las piezas
+    // volteadas 90° desde el inicio, y nos quedamos con el resultado que use
+    // menos planchas (o menos costo si empatan en planchas).
+    const orientationVariants = allowRotate ? [items, items.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [items];
+
+    // Para "corte libre" (MaxRects) probamos varias reglas de decisión —
+    // cada una prioriza algo distinto al elegir en qué hueco meter la pieza —
+    // y nos quedamos con la que arme el mejor acomodo. Guillotina usa una
+    // sola regla fija (no aplica aquí).
+    const rules = method === 'guillotine' ? [undefined] : ['bssf', 'blsf', 'baf', 'bl'];
+
     let bestSheets = null, bestCost = Infinity;
-    strategies.forEach(fn => {
-      const sheets = packFn(panelOptions, items, fn, allowRotate, tolerance);
-      const cost = sheetsTotalCost(sheets);
-      if(cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && (!bestSheets || sheets.length < bestSheets.length))){
-        bestSheets = sheets;
-        bestCost = cost;
-      }
+    orientationVariants.forEach(variantItems => {
+      rules.forEach(rule => {
+        strategies.forEach(fn => {
+          const sheets = packFn(panelOptions, variantItems, fn, allowRotate, tolerance, rule);
+          const cost = sheetsTotalCost(sheets);
+          const better = !bestSheets
+            || sheets.length < bestSheets.length - 1e-9
+            || (Math.abs(sheets.length - bestSheets.length) < 1e-9 && cost < bestCost - 1e-6);
+          if(better){
+            bestSheets = sheets;
+            bestCost = cost;
+          }
+        });
+      });
     });
 
     return bestSheets;
