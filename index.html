@@ -275,6 +275,18 @@
     margin-top:5px;
   }
 
+
+  /* Ajuste de distribución de campos de cortes en plano */
+  #paramGridMain2D{
+    grid-template-columns:2fr 1fr;
+  }
+  #paramGridMain2D #panelWidthFieldWrap{order:1;}
+  #paramGridMain2D #unit2DFieldWrap{order:2;}
+  #paramGridMain2D #panelHeightFieldWrap{order:3; grid-column:1 / -1;}
+  #paramGridMain2D #tolerance2DFieldWrap{order:4;}
+  #paramGridMain2D #toleranceUnit2DFieldWrap{order:5;}
+  #paramGridMain2D #panelPriceField{order:6; grid-column:1 / -1;}
+
   /* ---- Pieces table ---- */
   table.pieces{
     width:100%;
@@ -558,26 +570,26 @@
       <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
-      <div class="param-grid">
-        <div class="field length-related">
+      <div class="param-grid" id="paramGridMain">
+        <div class="field length-related" id="stockLengthFieldWrap">
           <label for="stockLength">Longitud del material</label>
-          <input type="number" id="stockLength" min="0.01" step="any" value="6000">
+          <input type="number" id="stockLength" min="0.01" step="any" value="96">
         </div>
-        <div class="field">
-          <label for="unit">Unidad</label>
+        <div class="field" id="unitFieldWrap">
+          <label for="unit">Unidad de material</label>
           <select id="unit">
-            <option value="mm" selected>mm</option>
+            <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="m">m</option>
-            <option value="in">in</option>
+            <option value="in" selected>in</option>
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="toleranceFieldWrap">
           <label for="tolerance">Tolerancia por corte</label>
           <input type="number" id="tolerance" min="0" step="any" value="3">
         </div>
-        <div class="field">
+        <div class="field" id="toleranceUnitFieldWrap">
           <label for="toleranceUnit">Unidad de tolerancia</label>
           <select id="toleranceUnit">
             <option value="mm" selected>mm</option>
@@ -592,7 +604,7 @@
           <input type="number" id="stockPrice" min="0" step="any" placeholder="0.00">
         </div>
       </div>
-      <p class="hint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente. Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
+      <p class="hint" id="toleranceHint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente. Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
 
       <div class="toggle-row">
         <input type="checkbox" id="multiLengthToggle">
@@ -603,6 +615,17 @@
       </div>
 
       <div id="multiLengthPanel">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las longitudes?</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priorityLinear" value="cost" checked style="accent-color:var(--accent);"> Menor costo total
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priorityLinear" value="material" style="accent-color:var(--accent);"> Menor material usado (menos barras)
+            </label>
+          </div>
+        </div>
         <table class="pieces">
           <thead>
             <tr>
@@ -676,34 +699,30 @@
       <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
-      <div class="param-grid">
-        <div class="field length-related-2d">
+      <div class="param-grid" id="paramGridMain2D">
+        <div class="field length-related-2d" id="panelWidthFieldWrap">
           <label for="panelWidth">Ancho de la plancha</label>
-          <input type="number" id="panelWidth" min="0.01" step="any" value="2440">
+          <input type="number" id="panelWidth" min="0.01" step="any" value="96">
         </div>
-        <div class="field">
-          <label for="unit2D">Unidad</label>
+        <div class="field" id="unit2DFieldWrap">
+          <label for="unit2D">Unidad de planchas</label>
           <select id="unit2D">
-            <option value="mm" selected>mm</option>
+            <option value="mm">mm</option>
             <option value="cm">cm</option>
             <option value="m">m</option>
-            <option value="in">in</option>
+            <option value="in" selected>in</option>
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field length-related-2d">
+        <div class="field length-related-2d" id="panelHeightFieldWrap">
           <label for="panelHeight">Alto de la plancha</label>
-          <input type="number" id="panelHeight" min="0.01" step="any" value="1220">
+          <input type="number" id="panelHeight" min="0.01" step="any" value="48">
         </div>
-        <div class="field">
-          <label for="unit2Db">Unidad</label>
-          <select id="unit2Db" disabled></select>
-        </div>
-        <div class="field">
+        <div class="field" id="tolerance2DFieldWrap">
           <label for="tolerance2D">Tolerancia de corte</label>
           <input type="number" id="tolerance2D" min="0" step="any" value="3">
         </div>
-        <div class="field">
+        <div class="field" id="toleranceUnit2DFieldWrap">
           <label for="toleranceUnit2D">Unidad de tolerancia</label>
           <select id="toleranceUnit2D">
             <option value="mm" selected>mm</option>
@@ -718,7 +737,7 @@
           <input type="number" id="panelPrice" min="0" step="any" placeholder="0.00">
         </div>
       </div>
-      <p class="hint">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha. Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
+      <p class="hint" id="toleranceHint2D">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha. Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
 
       <div class="toggle-row">
         <input type="checkbox" id="multiPanelToggle">
@@ -729,6 +748,17 @@
       </div>
 
       <div id="multiPanelPanel">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las medidas?</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priority2D" value="material" checked style="accent-color:var(--accent);"> Menor material usado (menos planchas)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priority2D" value="cost" style="accent-color:var(--accent);"> Menor costo total
+            </label>
+          </div>
+        </div>
         <table class="pieces">
           <thead>
             <tr>
@@ -933,26 +963,73 @@
 
   document.getElementById('addStockBtn').addEventListener('click', () => addStockRow('', ''));
 
+  function moveMultiToggleFirst(toggleId, gridId){
+    const toggle = document.getElementById(toggleId)?.closest('.toggle-row');
+    const grid = document.getElementById(gridId);
+    if(toggle && grid && toggle.parentElement){
+      if(toggle.previousElementSibling !== grid && toggle.parentElement.firstElementChild !== toggle){
+        toggle.parentElement.insertBefore(toggle, grid);
+      }
+    }
+  }
+
+  function updateLengthLayout(){
+    const stockLengthFieldWrap = document.getElementById('stockLengthFieldWrap');
+    const stockPriceField = document.getElementById('stockPriceField');
+    const unitFieldWrap = document.getElementById('unitFieldWrap');
+    const toleranceFieldWrap = document.getElementById('toleranceFieldWrap');
+    const toleranceUnitFieldWrap = document.getElementById('toleranceUnitFieldWrap');
+    const toleranceHint = document.getElementById('toleranceHint');
+
+    moveMultiToggleFirst('multiLengthToggle','paramGridMain');
+
+    if(multiLengthToggle.checked){
+      stockLengthFieldWrap.style.display = 'none';
+      stockPriceField.style.display = 'none';
+
+      toleranceFieldWrap.style.order = '1';
+      toleranceUnitFieldWrap.style.order = '2';
+      unitFieldWrap.style.order = '3';
+      unitFieldWrap.style.gridColumn = '1 / -1';
+
+      if(toleranceHint) toleranceHint.style.display = 'none';
+    } else {
+      stockLengthFieldWrap.style.display = '';
+      stockPriceField.style.display = '';
+
+      [stockLengthFieldWrap, stockPriceField, unitFieldWrap, toleranceFieldWrap, toleranceUnitFieldWrap].forEach(el=>{
+        el.style.order = '';
+        el.style.gridColumn = '';
+      });
+
+      if(toleranceHint) toleranceHint.style.display = '';
+    }
+  }
+
   multiLengthToggle.addEventListener('change', () => {
     const lengthFields = document.querySelectorAll('.length-related');
+    const toleranceHint = document.getElementById('toleranceHint');
     if(multiLengthToggle.checked){
       multiLengthPanel.classList.add('open');
       lengthFields.forEach(f => f.classList.add('disabled'));
+      if(toleranceHint) toleranceHint.style.display = 'none';
     } else {
       multiLengthPanel.classList.remove('open');
       lengthFields.forEach(f => f.classList.remove('disabled'));
+      if(toleranceHint) toleranceHint.style.display = '';
     }
+    updateLengthLayout();
   });
 
   // seed with example stock lengths
-  addStockRow(6000, 450);
-  addStockRow(3000, 260);
+  addStockRow(96, 45);
+  addStockRow(48, 25);
   stockUnitLabel.textContent = unitSelect.value;
 
   // seed with example rows
-  addPiece('Pieza A', 1200, 4);
-  addPiece('Pieza B', 850, 6);
-  addPiece('Pieza C', 400, 10);
+  addPiece('Pieza A', 24, 4);
+  addPiece('Pieza B', 18, 6);
+  addPiece('Pieza C', 10, 10);
 
   // ---------- ALGORITHM: Best-Fit Decreasing bin packing (1D cutting stock) ----------
   // stockOptions: [{length, price}] — one or more available material lengths, each with its price.
@@ -989,7 +1066,7 @@
     return bins.reduce((s,b) => s + (parseFloat(b.price) || 0), 0);
   }
 
-  function optimizeCuts(stockOptions, tolerance, pieces){
+  function optimizeCuts(stockOptions, tolerance, pieces, priority){
     // Expand into individual items
     let items = [];
     pieces.forEach(p => {
@@ -1029,7 +1106,10 @@
     strategies.forEach(fn => {
       const bins = packWithStrategy(stockOptions, items, fn, tolerance);
       const cost = binsTotalCost(bins);
-      if(cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && (!bestBins || bins.length < bestBins.length))){
+      const better = !bestBins || (priority === 'material'
+        ? (bins.length < bestBins.length - 1e-9 || (Math.abs(bins.length-bestBins.length) < 1e-9 && cost < bestCost - 1e-6))
+        : (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && bins.length < bestBins.length)));
+      if(better){
         bestBins = bins;
         bestCost = cost;
       }
@@ -1099,7 +1179,7 @@
     </svg>`;
   }
 
-  function render(bins, unit, showCost, maxStockAvailable, tolerance){
+  function render(bins, unit, showCost, tolerance){
     const currency = '$';
     errBanner.style.display = 'none';
     const oldBreakdown = document.getElementById('costBreakdownWrap');
@@ -1110,10 +1190,6 @@
     const totalUsedMaterial = bins.reduce((s,b)=>s+b.stockLength,0);
     const totalWaste = bins.reduce((s,b)=>s+b.remaining,0);
     const efficiency = 100 * (1 - totalWaste/totalUsedMaterial);
-    // Demanda real = lo que cada barra efectivamente consumió (largo de barra − sobrante),
-    // que ya refleja que la última pieza de cada barra no carga tolerancia extra.
-    const totalDemandLength = bins.reduce((s,b)=> s + (b.stockLength - b.remaining), 0);
-    const lowerBound = Math.ceil(totalDemandLength / maxStockAvailable);
     const totalCost = binsTotalCost(bins);
 
     let cards = `
@@ -1141,10 +1217,6 @@
       </div>`;
     }
     summaryGrid.innerHTML = cards;
-
-    lowerBoundNote.textContent = bins.length === lowerBound
-      ? `Este resultado alcanza el mínimo teórico posible (${lowerBound} barra${lowerBound===1?'':'s'}, según longitud total requerida entre la longitud de material más larga disponible).`
-      : `Mínimo teórico de referencia: ${lowerBound} barra${lowerBound===1?'':'s'} (longitud total requerida ÷ longitud de material más larga disponible). El algoritmo heurístico usó ${bins.length}; para problemas de empaquetado 1D encontrar siempre el óptimo exacto es computacionalmente costoso, pero Best-Fit Decreasing suele quedar muy cerca${showCost ? ', y aquí además se comparó el costo de varias estrategias de selección de longitud para quedarse con la más barata' : ''}.`;
 
     // cost breakdown table
     if(showCost){
@@ -1241,9 +1313,9 @@
     }
 
     try{
-      const bins = optimizeCuts(stockOptions, tolerance, validPieces);
-      const maxStockAvailable = Math.max(...stockOptions.map(s=>s.length));
-      render(bins, unit, showCost, maxStockAvailable, tolerance);
+      const priorityLinear = document.querySelector('input[name="priorityLinear"]:checked').value;
+      const bins = optimizeCuts(stockOptions, tolerance, validPieces, priorityLinear);
+      render(bins, unit, showCost, tolerance);
     } catch(e){
       errBanner.style.display = 'block';
       errBanner.textContent = e.message || 'No fue posible calcular la distribución.';
@@ -1271,7 +1343,6 @@
 
   const pieces2DBody = document.getElementById('pieces2DBody');
   const unit2DSelect = document.getElementById('unit2D');
-  const unit2DbSelect = document.getElementById('unit2Db');
   const toleranceUnit2DSelect = document.getElementById('toleranceUnit2D');
   const grainToggle = document.getElementById('grainToggle');
   const multiPanelToggle = document.getElementById('multiPanelToggle');
@@ -1286,8 +1357,6 @@
   const cutlistBody2D = document.getElementById('cutlistBody2D');
 
   function syncUnit2Db(){
-    unit2DbSelect.innerHTML = unit2DSelect.innerHTML;
-    unit2DbSelect.value = unit2DSelect.value;
     panelUnitLabel.textContent = unit2DSelect.value;
   }
   syncUnit2Db();
@@ -1367,6 +1436,42 @@
   }
   document.getElementById('addPanelBtn').addEventListener('click', () => addPanelOption('', '', ''));
 
+  function updatePanelLayout(){
+    const panelWidthFieldWrap = document.getElementById('panelWidthFieldWrap');
+    const panelHeightFieldWrap = document.getElementById('panelHeightFieldWrap');
+    const panelPriceField = document.getElementById('panelPriceField');
+    const unit2DFieldWrap = document.getElementById('unit2DFieldWrap');
+    const tolerance2DFieldWrap = document.getElementById('tolerance2DFieldWrap');
+    const toleranceUnit2DFieldWrap = document.getElementById('toleranceUnit2DFieldWrap');
+    const toleranceHint2D = document.getElementById('toleranceHint2D');
+
+    moveMultiToggleFirst('multiPanelToggle','paramGridMain2D');
+
+    if(multiPanelToggle.checked){
+      panelWidthFieldWrap.style.display = 'none';
+      panelHeightFieldWrap.style.display = 'none';
+      panelPriceField.style.display = 'none';
+
+      tolerance2DFieldWrap.style.order = '1';
+      toleranceUnit2DFieldWrap.style.order = '2';
+      unit2DFieldWrap.style.order = '3';
+      unit2DFieldWrap.style.gridColumn = '1 / -1';
+
+      if(toleranceHint2D) toleranceHint2D.style.display = 'none';
+    } else {
+      panelWidthFieldWrap.style.display = '';
+      panelHeightFieldWrap.style.display = '';
+      panelPriceField.style.display = '';
+
+      [panelWidthFieldWrap, panelHeightFieldWrap, panelPriceField, unit2DFieldWrap, tolerance2DFieldWrap, toleranceUnit2DFieldWrap].forEach(el=>{
+        el.style.order = '';
+        el.style.gridColumn = '';
+      });
+
+      if(toleranceHint2D) toleranceHint2D.style.display = '';
+    }
+  }
+
   multiPanelToggle.addEventListener('change', () => {
     const lengthFields = document.querySelectorAll('.length-related-2d');
     if(multiPanelToggle.checked){
@@ -1376,14 +1481,15 @@
       multiPanelPanel.classList.remove('open');
       lengthFields.forEach(f => f.classList.remove('disabled'));
     }
+    updatePanelLayout();
   });
 
   // seed examples
-  addPanelOption(2440, 1220, 680);
-  addPanelOption(1220, 1220, 380);
-  addPiece2D('Costado', 600, 400, 4);
-  addPiece2D('Repisa', 800, 300, 3);
-  addPiece2D('Puerta', 450, 700, 2);
+  addPanelOption(96, 48, 68);
+  addPanelOption(48, 48, 38);
+  addPiece2D('Costado', 24, 16, 4);
+  addPiece2D('Repisa', 32, 12, 3);
+  addPiece2D('Puerta', 18, 28, 2);
 
   // ---------- ALGORITHMS: 2D rectangle nesting ----------
 
@@ -1580,7 +1686,7 @@
     return sheets.reduce((s, sh) => s + (parseFloat(sh.price) || 0), 0);
   }
 
-  function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate){
+  function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate, priority){
     let items = [];
     pieces.forEach(p => {
       const w = parseFloat(p.width), h = parseFloat(p.height), qty = parseInt(p.qty, 10);
@@ -1638,9 +1744,9 @@
         strategies.forEach(fn => {
           const sheets = packFn(panelOptions, variantItems, fn, allowRotate, tolerance, rule);
           const cost = sheetsTotalCost(sheets);
-          const better = !bestSheets
-            || sheets.length < bestSheets.length - 1e-9
-            || (Math.abs(sheets.length - bestSheets.length) < 1e-9 && cost < bestCost - 1e-6);
+          const better = !bestSheets || (priority === 'cost'
+            ? (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && sheets.length < bestSheets.length))
+            : (sheets.length < bestSheets.length - 1e-9 || (Math.abs(sheets.length - bestSheets.length) < 1e-9 && cost < bestCost - 1e-6)));
           if(better){
             bestSheets = sheets;
             bestCost = cost;
@@ -1747,9 +1853,6 @@
     }
     summaryGrid2D.innerHTML = cards;
 
-    const methodLabel = method === 'guillotine' ? 'Guillotina (Best-Area-Fit, corte de eje más corto)' : 'Empaquetado libre (MaxRects, Best-Short-Side-Fit)';
-    lowerBoundNote2D.textContent = `Acomodo resuelto con el método ${methodLabel}. La eficiencia es área ocupada ÷ área total de plancha(s). Encontrar el acomodo perfectamente óptimo de rectángulos es un problema NP-difícil; estas heurísticas son las que usa el software de nesting de la industria y suelen acercarse mucho al óptimo${showCost ? ', y aquí además se comparó el costo de varias estrategias de selección de medida para quedarse con la más barata' : ''}.`;
-
     if(showCost){
       const groups = {};
       sheets.forEach(sh => {
@@ -1851,7 +1954,8 @@
     }
 
     try{
-      const sheets = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate);
+      const priority2D = document.querySelector('input[name="priority2D"]:checked').value;
+      const sheets = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D);
       render2D(sheets, unit, showCost, method);
     } catch(e){
       errBanner2D.style.display = 'block';
