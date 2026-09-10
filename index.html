@@ -622,7 +622,7 @@
               <input type="radio" name="priorityLinear" value="cost" checked style="accent-color:var(--accent);"> Menor costo total
             </label>
             <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="priorityLinear" value="material" style="accent-color:var(--accent);"> Menor material usado (menos barras)
+              <input type="radio" name="priorityLinear" value="material" style="accent-color:var(--accent);"> Menor desperdicio de material
             </label>
           </div>
         </div>
@@ -752,7 +752,7 @@
           <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las medidas?</label>
           <div style="display:flex;gap:20px;flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
-              <input type="radio" name="priority2D" value="material" checked style="accent-color:var(--accent);"> Menor material usado (menos planchas)
+              <input type="radio" name="priority2D" value="material" checked style="accent-color:var(--accent);"> Menor desperdicio de material
             </label>
             <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
               <input type="radio" name="priority2D" value="cost" style="accent-color:var(--accent);"> Menor costo total
@@ -1066,6 +1066,10 @@
     return bins.reduce((s,b) => s + (parseFloat(b.price) || 0), 0);
   }
 
+  function binsTotalWaste(bins){
+    return bins.reduce((s,b) => s + b.remaining, 0);
+  }
+
   function optimizeCuts(stockOptions, tolerance, pieces, priority){
     // Expand into individual items
     let items = [];
@@ -1093,7 +1097,8 @@
     items.sort((a,b) => b.length - a.length);
 
     // Try a few strategies for choosing which stock length to open when none of the
-    // currently open bins fit, and keep whichever gives the lowest total cost.
+    // currently open bins fit, and keep whichever best matches the chosen priority
+    // (least waste or lowest total cost).
     const strategies = [
       candidates => candidates.reduce((a,b) => ((b.price/b.length) < (a.price/a.length) ? b : a)), // cheapest per unit of length
       candidates => candidates.reduce((a,b) => (b.length < a.length ? b : a)), // smallest length that fits (least waste)
@@ -1103,15 +1108,18 @@
 
     let bestBins = null;
     let bestCost = Infinity;
+    let bestWaste = Infinity;
     strategies.forEach(fn => {
       const bins = packWithStrategy(stockOptions, items, fn, tolerance);
       const cost = binsTotalCost(bins);
+      const waste = binsTotalWaste(bins);
       const better = !bestBins || (priority === 'material'
-        ? (bins.length < bestBins.length - 1e-9 || (Math.abs(bins.length-bestBins.length) < 1e-9 && cost < bestCost - 1e-6))
-        : (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && bins.length < bestBins.length)));
+        ? (waste < bestWaste - 1e-6 || (Math.abs(waste-bestWaste) < 1e-6 && cost < bestCost - 1e-6))
+        : (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && waste < bestWaste - 1e-6)));
       if(better){
         bestBins = bins;
         bestCost = cost;
+        bestWaste = waste;
       }
     });
 
@@ -1686,6 +1694,13 @@
     return sheets.reduce((s, sh) => s + (parseFloat(sh.price) || 0), 0);
   }
 
+  function sheetsTotalWaste(sheets){
+    return sheets.reduce((s, sh) => {
+      const used = sh.placed.reduce((s2, p) => s2 + p.w*p.h, 0);
+      return s + (sh.width*sh.height - used);
+    }, 0);
+  }
+
   function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate, priority){
     let items = [];
     pieces.forEach(p => {
@@ -1728,8 +1743,8 @@
     // tal cual se capturó — y esa primera decisión cambia todo el acomodo que
     // viene después. Para no depender de si el usuario escribió "3.5 × 2" o
     // "2 × 3.5", probamos el empaquetado completo también con todas las piezas
-    // volteadas 90° desde el inicio, y nos quedamos con el resultado que use
-    // menos planchas (o menos costo si empatan en planchas).
+    // volteadas 90° desde el inicio, y nos quedamos con el resultado que mejor
+    // cumpla la prioridad elegida (menor desperdicio o menor costo).
     const orientationVariants = allowRotate ? [items, items.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [items];
 
     // Para "corte libre" (MaxRects) probamos varias reglas de decisión —
@@ -1738,18 +1753,20 @@
     // sola regla fija (no aplica aquí).
     const rules = method === 'guillotine' ? [undefined] : ['bssf', 'blsf', 'baf', 'bl'];
 
-    let bestSheets = null, bestCost = Infinity;
+    let bestSheets = null, bestCost = Infinity, bestWaste = Infinity;
     orientationVariants.forEach(variantItems => {
       rules.forEach(rule => {
         strategies.forEach(fn => {
           const sheets = packFn(panelOptions, variantItems, fn, allowRotate, tolerance, rule);
           const cost = sheetsTotalCost(sheets);
+          const waste = sheetsTotalWaste(sheets);
           const better = !bestSheets || (priority === 'cost'
-            ? (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && sheets.length < bestSheets.length))
-            : (sheets.length < bestSheets.length - 1e-9 || (Math.abs(sheets.length - bestSheets.length) < 1e-9 && cost < bestCost - 1e-6)));
+            ? (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && waste < bestWaste - 1e-6))
+            : (waste < bestWaste - 1e-6 || (Math.abs(waste-bestWaste) < 1e-6 && cost < bestCost - 1e-6)));
           if(better){
             bestSheets = sheets;
             bestCost = cost;
+            bestWaste = waste;
           }
         });
       });
