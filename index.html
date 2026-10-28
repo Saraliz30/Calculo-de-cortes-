@@ -137,6 +137,32 @@
     grid-template-columns:2fr 1fr;
     gap:14px 16px;
   }
+  .collapsible-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:none;
+    border:none;
+    padding:0 0 10px;
+    margin:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    font-weight:700;
+    color:var(--ink-soft);
+    cursor:pointer;
+    width:100%;
+    text-align:left;
+  }
+  .collapsible-toggle .chevron{
+    display:inline-block;
+    transition:transform .15s;
+    font-size:10px;
+  }
+  .collapsible-section.collapsed .collapsible-toggle .chevron{transform:rotate(-90deg);}
+  .collapsible-section.collapsed .collapsible-body{display:none;}
+
   .toggle-row{
     display:flex;
     align-items:flex-start;
@@ -156,24 +182,31 @@
     cursor:pointer;
   }
   .toggle-row .toggle-text .hint{margin-top:2px;}
-  #multiLengthPanel{
-    margin-top:16px;
-    display:none;
+  .mode-tab{
+    border-top:1px dashed var(--grid);
+    padding:12px 0 6px;
+    margin-top:6px;
   }
-  #multiLengthPanel.open{display:block;}
-  .length-related.disabled{
-    opacity:.4;
-    pointer-events:none;
+  .mode-tab-btn{
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--ink);
+    letter-spacing:.01em;
   }
-  .length-related-2d.disabled{
-    opacity:.4;
-    pointer-events:none;
+  .mode-badge{
+    margin-left:10px;
+    padding:1px 8px;
+    border-radius:10px;
+    background:var(--accent);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    vertical-align:1px;
   }
-  #multiPanelPanel{
-    margin-top:16px;
-    display:none;
-  }
-  #multiPanelPanel.open{display:block;}
+  .mode-tab-body{margin-top:12px;}
+  .tol-block{margin-top:14px;}
   .group-head{
     margin:52px 0 20px;
     display:flex;
@@ -275,18 +308,6 @@
     margin-top:5px;
   }
 
-
-  /* Ajuste de distribución de campos de cortes en plano */
-  #paramGridMain2D{
-    grid-template-columns:2fr 1fr;
-  }
-  #paramGridMain2D #panelWidthFieldWrap{order:1;}
-  #paramGridMain2D #unit2DFieldWrap{order:2;}
-  #paramGridMain2D #panelHeightFieldWrap{order:3; grid-column:1 / -1;}
-  #paramGridMain2D #tolerance2DFieldWrap{order:4;}
-  #paramGridMain2D #toleranceUnit2DFieldWrap{order:5;}
-  #paramGridMain2D #panelPriceField{order:6; grid-column:1 / -1;}
-
   /* ---- Pieces table ---- */
   table.pieces{
     width:100%;
@@ -345,6 +366,18 @@
   }
   .btn:hover{color:var(--ink);box-shadow:2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);}
   .btn:active{box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);}
+  .collapse-toggle-btn{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    padding:2px 0;
+  }
+  .collapse-toggle-btn:hover{color:var(--ink);}
+
   .btn-del{
     border:none;
     background:none;
@@ -570,13 +603,18 @@
       <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
-      <div class="param-grid" id="paramGridMain">
-        <div class="field length-related" id="stockLengthFieldWrap">
+      <input type="checkbox" id="multiLengthToggle" style="display:none" tabindex="-1" aria-hidden="true">
+
+      <div class="mode-tab">
+        <button type="button" id="singleLengthToggleBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="singleLengthBody" class="mode-tab-body">
+          <div class="param-grid" id="paramGridMain">
+<div class="field" id="stockLengthFieldWrap">
           <label for="stockLength">Longitud del material</label>
           <input type="number" id="stockLength" min="0.01" step="any" value="96">
         </div>
-        <div class="field" id="unitFieldWrap">
-          <label for="unit">Unidad de material</label>
+<div class="field" id="unitFieldWrap">
+          <label for="unit">Unidad</label>
           <select id="unit">
             <option value="mm">mm</option>
             <option value="cm">cm</option>
@@ -585,11 +623,20 @@
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field" id="toleranceFieldWrap">
+<div class="field" id="stockPriceField">
+          <label for="stockPrice">Precio del material (opcional)</label>
+          <input type="number" id="stockPrice" min="0" step="any" placeholder="0.00">
+        </div>
+          </div>
+          <p class="hint">Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
+          <div id="tolSlotSingleLinear">
+            <div id="tolBlockLinear" class="tol-block">
+              <div class="param-grid">
+<div class="field" id="toleranceFieldWrap">
           <label for="tolerance">Tolerancia por corte</label>
           <input type="number" id="tolerance" min="0" step="any" value="3">
         </div>
-        <div class="field" id="toleranceUnitFieldWrap">
+<div class="field" id="toleranceUnitFieldWrap">
           <label for="toleranceUnit">Unidad de tolerancia</label>
           <select id="toleranceUnit">
             <option value="mm" selected>mm</option>
@@ -599,22 +646,18 @@
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field length-related" id="stockPriceField">
-          <label for="stockPrice">Precio del material (opcional)</label>
-          <input type="number" id="stockPrice" min="0" step="any" placeholder="0.00">
-        </div>
-      </div>
-      <p class="hint" id="toleranceHint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente. Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
-
-      <div class="toggle-row">
-        <input type="checkbox" id="multiLengthToggle">
-        <div class="toggle-text">
-          <label for="multiLengthToggle">Usar varias longitudes de material, cada una con su precio</label>
-          <p class="hint">La calculadora decide por sí sola qué longitud conviene usar en cada corte (una más chica, más larga, o una combinación) para minimizar el costo total.</p>
+              </div>
+              <p class="hint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div id="multiLengthPanel">
+      <div class="mode-tab">
+        <button type="button" id="multiLengthArrowBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="multiLengthBody" class="mode-tab-body" style="display:none;">
+          <p class="hint" style="margin-bottom:12px;">La calculadora decide por sí sola qué longitud conviene usar en cada corte (una más chica, más larga, o una combinación), cada una con su precio.</p>
+          <div class="param-grid" id="unitsRelocateTarget" style="margin-bottom:14px;"></div>
         <div style="margin-bottom:14px;">
           <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las longitudes?</label>
           <div style="display:flex;gap:20px;flex-wrap:wrap;">
@@ -637,6 +680,8 @@
           <tbody id="stockOptsBody"></tbody>
         </table>
         <button class="btn btn-add" id="addStockBtn">+ Añadir longitud</button>
+          <div id="tolSlotMultiLinear"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -699,13 +744,18 @@
       <h2>Medidas del material base</h2>
     </div>
     <div class="panel">
-      <div class="param-grid" id="paramGridMain2D">
-        <div class="field length-related-2d" id="panelWidthFieldWrap">
+      <input type="checkbox" id="multiPanelToggle" style="display:none" tabindex="-1" aria-hidden="true">
+
+      <div class="mode-tab">
+        <button type="button" id="singlePanelToggleBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="singlePanelBody" class="mode-tab-body">
+          <div class="param-grid" id="paramGridMain2D">
+<div class="field" id="panelWidthFieldWrap">
           <label for="panelWidth">Ancho de la plancha</label>
           <input type="number" id="panelWidth" min="0.01" step="any" value="96">
         </div>
-        <div class="field" id="unit2DFieldWrap">
-          <label for="unit2D">Unidad de planchas</label>
+<div class="field" id="unit2DFieldWrap">
+          <label for="unit2D">Unidad</label>
           <select id="unit2D">
             <option value="mm">mm</option>
             <option value="cm">cm</option>
@@ -714,15 +764,28 @@
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field length-related-2d" id="panelHeightFieldWrap">
+<div class="field" id="panelHeightFieldWrap">
           <label for="panelHeight">Alto de la plancha</label>
           <input type="number" id="panelHeight" min="0.01" step="any" value="48">
         </div>
-        <div class="field" id="tolerance2DFieldWrap">
+<div class="field" id="unit2DbFieldWrap">
+          <label for="unit2Db">Unidad</label>
+          <select id="unit2Db" disabled></select>
+        </div>
+<div class="field" id="panelPriceField">
+          <label for="panelPrice">Precio de la plancha (opcional)</label>
+          <input type="number" id="panelPrice" min="0" step="any" placeholder="0.00">
+        </div>
+          </div>
+          <p class="hint">Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
+          <div id="tolSlotSingle2D">
+            <div id="tolBlock2D" class="tol-block">
+              <div class="param-grid">
+<div class="field" id="tolerance2DFieldWrap">
           <label for="tolerance2D">Tolerancia de corte</label>
           <input type="number" id="tolerance2D" min="0" step="any" value="3">
         </div>
-        <div class="field" id="toleranceUnit2DFieldWrap">
+<div class="field" id="toleranceUnit2DFieldWrap">
           <label for="toleranceUnit2D">Unidad de tolerancia</label>
           <select id="toleranceUnit2D">
             <option value="mm" selected>mm</option>
@@ -732,22 +795,18 @@
             <option value="ft">ft</option>
           </select>
         </div>
-        <div class="field length-related-2d" id="panelPriceField">
-          <label for="panelPrice">Precio de la plancha (opcional)</label>
-          <input type="number" id="panelPrice" min="0" step="any" placeholder="0.00">
-        </div>
-      </div>
-      <p class="hint" id="toleranceHint2D">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha. Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
-
-      <div class="toggle-row">
-        <input type="checkbox" id="multiPanelToggle">
-        <div class="toggle-text">
-          <label for="multiPanelToggle">Usar varias medidas de plancha, cada una con su precio</label>
-          <p class="hint">La calculadora decide qué medida conviene usar en cada plancha para minimizar el costo total.</p>
+              </div>
+              <p class="hint">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div id="multiPanelPanel">
+      <div class="mode-tab">
+        <button type="button" id="multiPanelArrowBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="multiPanelBody" class="mode-tab-body" style="display:none;">
+          <p class="hint" style="margin-bottom:12px;">La calculadora decide qué medida conviene usar en cada plancha, cada una con su precio.</p>
+          <div class="param-grid" id="unitsRelocateTarget2D" style="margin-bottom:14px;"></div>
         <div style="margin-bottom:14px;">
           <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las medidas?</label>
           <div style="display:flex;gap:20px;flex-wrap:wrap;">
@@ -771,6 +830,8 @@
           <tbody id="panelOptsBody"></tbody>
         </table>
         <button class="btn btn-add" id="addPanelBtn">+ Añadir medida</button>
+          <div id="tolSlotMulti2D"></div>
+        </div>
       </div>
 
       <div class="toggle-row">
@@ -793,6 +854,27 @@
             </label>
           </div>
           <p class="hint">Guillotina: cada corte atraviesa toda la plancha, como con sierra de mesa o circular — más realista para taller. Empaquetado libre: acomoda piezas donde mejor quepan, sin esa restricción — más aprovechamiento, pero puede requerir cortes en varias pasadas.</p>
+        </div>
+      </div>
+
+      <div class="toggle-row" id="qualityRow" style="border-top:none;padding-top:0;margin-top:14px;">
+        <div class="toggle-text" style="width:100%;">
+          <label style="display:block;margin-bottom:8px;">Calidad del cálculo</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="quality2D" value="fast" checked style="accent-color:var(--accent);"> Rápido
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="quality2D" value="max" style="accent-color:var(--accent);"> Máxima calidad, durante
+            </label>
+            <select id="qualityTime2D" style="width:auto;">
+              <option value="5">5 segundos</option>
+              <option value="15" selected>15 segundos</option>
+              <option value="30">30 segundos</option>
+              <option value="60">60 segundos</option>
+            </select>
+          </div>
+          <p class="hint">Solo para guillotina: prueba muchos órdenes de piezas y conserva el mejor acomodo. Nunca queda peor que el modo rápido, y puedes detenerlo en cualquier momento.</p>
         </div>
       </div>
     </div>
@@ -826,6 +908,13 @@
     <span class="hint">Ctrl/Cmd + Enter también calcula (usando la última sección visible).</span>
   </div>
   <div class="banner-err" id="errBanner2D"></div>
+  <div id="qualityProgress2D" style="display:none;margin:10px 0 0;">
+    <div style="height:6px;background:var(--grid);border-radius:4px;overflow:hidden;"><div id="qualityBar2D" style="height:100%;width:0;background:var(--accent);"></div></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+      <span class="hint" id="qualityText2D" style="margin:0;"></span>
+      <button type="button" class="btn" id="qualityStopBtn2D">Detener</button>
+    </div>
+  </div>
 
   <!-- SECTION 6: resultados 2D -->
   <section id="results2D">
@@ -868,7 +957,6 @@
   const unitSelect = document.getElementById('unit');
   const toleranceUnitSelect = document.getElementById('toleranceUnit');
   const multiLengthToggle = document.getElementById('multiLengthToggle');
-  const multiLengthPanel = document.getElementById('multiLengthPanel');
   const stockOptsBody = document.getElementById('stockOptsBody');
   const stockUnitLabel = document.getElementById('stockUnitLabel');
 
@@ -963,62 +1051,63 @@
 
   document.getElementById('addStockBtn').addEventListener('click', () => addStockRow('', ''));
 
-  function moveMultiToggleFirst(toggleId, gridId){
-    const toggle = document.getElementById(toggleId)?.closest('.toggle-row');
-    const grid = document.getElementById(gridId);
-    if(toggle && grid && toggle.parentElement){
-      if(toggle.previousElementSibling !== grid && toggle.parentElement.firstElementChild !== toggle){
-        toggle.parentElement.insertBefore(toggle, grid);
+  // ---------- Pestañas "única / varias": la pestaña abierta es la que se usa ----------
+  // La casilla oculta (multiLengthToggle / multiPanelToggle) solo guarda el modo
+  // para que el resto del código lo lea igual que antes.
+  function setupModeTabs(cfg){
+    let mode = 'single', openSingle = true, openMulti = false;
+    const el = id => document.getElementById(id);
+    const stateBox = el(cfg.stateCheckbox);
+    const singleBtn = el(cfg.singleBtn), multiBtn = el(cfg.multiBtn);
+    const singleBody = el(cfg.singleBody), multiBody = el(cfg.multiBody);
+    const tolBlock = el(cfg.tolBlock);
+    const tolSingle = el(cfg.tolSlotSingle), tolMulti = el(cfg.tolSlotMulti);
+    const unitSlotMulti = el(cfg.unitSlotMulti);
+    const unitWraps = cfg.unitWraps.map(el);
+    const restore = cfg.unitRestore.map(([anchor, unit]) => [el(anchor), el(unit)]);
+
+    function setLabel(btn, text, open, active){
+      btn.textContent = (open ? '▾ ' : '▸ ') + text;
+      if(active){
+        const badge = document.createElement('span');
+        badge.className = 'mode-badge';
+        badge.textContent = 'en uso';
+        btn.appendChild(badge);
       }
     }
+    function render(){
+      stateBox.checked = (mode === 'multi');
+      singleBody.style.display = openSingle ? '' : 'none';
+      multiBody.style.display = openMulti ? '' : 'none';
+      setLabel(singleBtn, cfg.singleText, openSingle, mode === 'single');
+      setLabel(multiBtn, cfg.multiText, openMulti, mode === 'multi');
+      if(mode === 'multi'){
+        unitWraps.forEach(w => unitSlotMulti.appendChild(w));
+        tolMulti.appendChild(tolBlock);
+      } else {
+        restore.forEach(([anchor, unit]) => anchor.after(unit));
+        tolSingle.appendChild(tolBlock);
+      }
+    }
+    singleBtn.addEventListener('click', () => {
+      if(mode === 'single'){ openSingle = !openSingle; }
+      else { mode = 'single'; openSingle = true; openMulti = false; }
+      render();
+    });
+    multiBtn.addEventListener('click', () => {
+      if(mode === 'multi'){ openMulti = !openMulti; }
+      else { mode = 'multi'; openMulti = true; openSingle = false; }
+      render();
+    });
+    render();
   }
 
-  function updateLengthLayout(){
-    const stockLengthFieldWrap = document.getElementById('stockLengthFieldWrap');
-    const stockPriceField = document.getElementById('stockPriceField');
-    const unitFieldWrap = document.getElementById('unitFieldWrap');
-    const toleranceFieldWrap = document.getElementById('toleranceFieldWrap');
-    const toleranceUnitFieldWrap = document.getElementById('toleranceUnitFieldWrap');
-    const toleranceHint = document.getElementById('toleranceHint');
-
-    moveMultiToggleFirst('multiLengthToggle','paramGridMain');
-
-    if(multiLengthToggle.checked){
-      stockLengthFieldWrap.style.display = 'none';
-      stockPriceField.style.display = 'none';
-
-      toleranceFieldWrap.style.order = '1';
-      toleranceUnitFieldWrap.style.order = '2';
-      unitFieldWrap.style.order = '3';
-      unitFieldWrap.style.gridColumn = '1 / -1';
-
-      if(toleranceHint) toleranceHint.style.display = 'none';
-    } else {
-      stockLengthFieldWrap.style.display = '';
-      stockPriceField.style.display = '';
-
-      [stockLengthFieldWrap, stockPriceField, unitFieldWrap, toleranceFieldWrap, toleranceUnitFieldWrap].forEach(el=>{
-        el.style.order = '';
-        el.style.gridColumn = '';
-      });
-
-      if(toleranceHint) toleranceHint.style.display = '';
-    }
-  }
-
-  multiLengthToggle.addEventListener('change', () => {
-    const lengthFields = document.querySelectorAll('.length-related');
-    const toleranceHint = document.getElementById('toleranceHint');
-    if(multiLengthToggle.checked){
-      multiLengthPanel.classList.add('open');
-      lengthFields.forEach(f => f.classList.add('disabled'));
-      if(toleranceHint) toleranceHint.style.display = 'none';
-    } else {
-      multiLengthPanel.classList.remove('open');
-      lengthFields.forEach(f => f.classList.remove('disabled'));
-      if(toleranceHint) toleranceHint.style.display = '';
-    }
-    updateLengthLayout();
+  setupModeTabs({
+    stateCheckbox:'multiLengthToggle', singleBtn:'singleLengthToggleBtn', multiBtn:'multiLengthArrowBtn',
+    singleBody:'singleLengthBody', multiBody:'multiLengthBody', tolBlock:'tolBlockLinear',
+    tolSlotSingle:'tolSlotSingleLinear', tolSlotMulti:'tolSlotMultiLinear', unitSlotMulti:'unitsRelocateTarget',
+    unitWraps:['unitFieldWrap'], unitRestore:[['stockLengthFieldWrap','unitFieldWrap']],
+    singleText:'Longitud única', multiText:'Varias longitudes de material'
   });
 
   // seed with example stock lengths
@@ -1066,8 +1155,97 @@
     return bins.reduce((s,b) => s + (parseFloat(b.price) || 0), 0);
   }
 
-  function binsTotalWaste(bins){
-    return bins.reduce((s,b) => s + b.remaining, 0);
+  // ----- Mejora posterior: elegir la mezcla de longitudes -----
+  // El empaquetado inicial decide la longitud de cada barra en el momento de abrirla,
+  // sin saber qué piezas faltan por llegar. Estos pasos corrigen eso después.
+
+  // Largo que realmente ocupan las piezas de una barra (tolerancia solo entre piezas).
+  function usedLength(items, tolerance){
+    return items.reduce((s,it) => s + it.length, 0) + Math.max(0, items.length - 1) * tolerance;
+  }
+
+  // Puntuación de un conjunto de barras: [costo, material] o [material, costo] según la prioridad.
+  function scoreBins(bins, priority){
+    const cost = binsTotalCost(bins);
+    const material = bins.reduce((s,b) => s + b.stockLength, 0);
+    return priority === 'material' ? [material, cost] : [cost, material];
+  }
+  function cmpScore(a, b){
+    for(let i = 0; i < a.length; i++){
+      if(a[i] < b[i] - 1e-6) return -1;
+      if(a[i] > b[i] + 1e-6) return 1;
+    }
+    return 0;
+  }
+
+  // La opción de material más conveniente (según la prioridad) a la que le caben las piezas.
+  function pickOption(used, stockOptions, priority){
+    let best = null;
+    stockOptions.forEach(s => {
+      if(s.length < used - 1e-9) return;
+      if(!best) { best = s; return; }
+      const sa = priority === 'material' ? [s.length, s.price] : [s.price, s.length];
+      const sb = priority === 'material' ? [best.length, best.price] : [best.price, best.length];
+      if(cmpScore(sa, sb) < 0) best = s;
+    });
+    return best;
+  }
+
+  function makeBin(items, option, tolerance){
+    return { stockLength: option.length, price: option.price, remaining: option.length - usedLength(items, tolerance), items };
+  }
+
+  // Paso 1: cada barra pasa a la longitud más conveniente a la que todavía le caben sus piezas.
+  function rightSizeBins(bins, stockOptions, tolerance, priority){
+    return bins.map(b => {
+      const opt = pickOption(usedLength(b.items, tolerance), stockOptions, priority);
+      return opt ? makeBin(b.items, opt, tolerance) : b;
+    });
+  }
+
+  // Paso 2: para cada par de barras, probar si sus piezas juntas caben en una sola barra,
+  // o si repartidas de otra forma entre dos barras (de cualquier longitud) salen mejor.
+  function improveBins(bins, stockOptions, tolerance, priority){
+    let improved = true, guard = 0;
+    while(improved && guard++ < 60){
+      improved = false;
+      for(let i = 0; i < bins.length && !improved; i++){
+        for(let j = i + 1; j < bins.length && !improved; j++){
+          const all = bins[i].items.concat(bins[j].items).sort((a,b) => b.length - a.length);
+          let bestScore = scoreBins([bins[i], bins[j]], priority);
+          let bestRes = null;
+
+          const optAll = pickOption(usedLength(all, tolerance), stockOptions, priority);
+          if(optAll){
+            const cand = [makeBin(all, optAll, tolerance)];
+            const sc = scoreBins(cand, priority);
+            if(cmpScore(sc, bestScore) < 0){ bestScore = sc; bestRes = cand; }
+          }
+
+          const n = all.length;
+          if(n <= 14){
+            for(let mask = 1; mask < (1 << (n - 1)); mask++){
+              const left = [], right = [];
+              for(let k = 0; k < n; k++){ ((mask >> k) & 1 ? left : right).push(all[k]); }
+              const oL = pickOption(usedLength(left, tolerance), stockOptions, priority);
+              const oR = pickOption(usedLength(right, tolerance), stockOptions, priority);
+              if(!oL || !oR) continue;
+              const cand = [makeBin(left, oL, tolerance), makeBin(right, oR, tolerance)];
+              const sc = scoreBins(cand, priority);
+              if(cmpScore(sc, bestScore) < 0){ bestScore = sc; bestRes = cand; }
+            }
+          }
+
+          if(bestRes){
+            bins.splice(j, 1);
+            bins[i] = bestRes[0];
+            if(bestRes[1]) bins.splice(i + 1, 0, bestRes[1]);
+            improved = true;
+          }
+        }
+      }
+    }
+    return bins;
   }
 
   function optimizeCuts(stockOptions, tolerance, pieces, priority){
@@ -1096,30 +1274,23 @@
     // Sort descending by length (Decreasing)
     items.sort((a,b) => b.length - a.length);
 
-    // Try a few strategies for choosing which stock length to open when none of the
-    // currently open bins fit, and keep whichever best matches the chosen priority
-    // (least waste or lowest total cost).
+    // Varias reglas para elegir qué longitud abrir cuando ninguna barra abierta alcanza.
     const strategies = [
-      candidates => candidates.reduce((a,b) => ((b.price/b.length) < (a.price/a.length) ? b : a)), // cheapest per unit of length
-      candidates => candidates.reduce((a,b) => (b.length < a.length ? b : a)), // smallest length that fits (least waste)
-      candidates => candidates.reduce((a,b) => (b.price < a.price ? b : a)), // cheapest absolute price
-      candidates => candidates.reduce((a,b) => (b.length > a.length ? b : a)), // largest length available
+      candidates => candidates.reduce((a,b) => ((b.price/b.length) < (a.price/a.length) ? b : a)), // más barata por unidad de largo
+      candidates => candidates.reduce((a,b) => (b.length < a.length ? b : a)), // la más corta que alcance
+      candidates => candidates.reduce((a,b) => (b.price < a.price ? b : a)), // la más barata en precio absoluto
+      candidates => candidates.reduce((a,b) => (b.length > a.length ? b : a)), // la más larga
     ];
 
-    let bestBins = null;
-    let bestCost = Infinity;
-    let bestWaste = Infinity;
+    let bestBins = null, bestScore = null;
     strategies.forEach(fn => {
-      const bins = packWithStrategy(stockOptions, items, fn, tolerance);
-      const cost = binsTotalCost(bins);
-      const waste = binsTotalWaste(bins);
-      const better = !bestBins || (priority === 'material'
-        ? (waste < bestWaste - 1e-6 || (Math.abs(waste-bestWaste) < 1e-6 && cost < bestCost - 1e-6))
-        : (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && waste < bestWaste - 1e-6)));
-      if(better){
+      let bins = packWithStrategy(stockOptions, items, fn, tolerance);
+      bins = rightSizeBins(bins, stockOptions, tolerance, priority);
+      bins = improveBins(bins, stockOptions, tolerance, priority);
+      const sc = scoreBins(bins, priority);
+      if(!bestBins || cmpScore(sc, bestScore) < 0){
         bestBins = bins;
-        bestCost = cost;
-        bestWaste = waste;
+        bestScore = sc;
       }
     });
 
@@ -1351,10 +1522,10 @@
 
   const pieces2DBody = document.getElementById('pieces2DBody');
   const unit2DSelect = document.getElementById('unit2D');
+  const unit2DbSelect = document.getElementById('unit2Db');
   const toleranceUnit2DSelect = document.getElementById('toleranceUnit2D');
   const grainToggle = document.getElementById('grainToggle');
   const multiPanelToggle = document.getElementById('multiPanelToggle');
-  const multiPanelPanel = document.getElementById('multiPanelPanel');
   const panelOptsBody = document.getElementById('panelOptsBody');
   const panelUnitLabel = document.getElementById('panelUnitLabel');
   const resultsSection2D = document.getElementById('results2D');
@@ -1365,6 +1536,8 @@
   const cutlistBody2D = document.getElementById('cutlistBody2D');
 
   function syncUnit2Db(){
+    unit2DbSelect.innerHTML = unit2DSelect.innerHTML;
+    unit2DbSelect.value = unit2DSelect.value;
     panelUnitLabel.textContent = unit2DSelect.value;
   }
   syncUnit2Db();
@@ -1444,52 +1617,13 @@
   }
   document.getElementById('addPanelBtn').addEventListener('click', () => addPanelOption('', '', ''));
 
-  function updatePanelLayout(){
-    const panelWidthFieldWrap = document.getElementById('panelWidthFieldWrap');
-    const panelHeightFieldWrap = document.getElementById('panelHeightFieldWrap');
-    const panelPriceField = document.getElementById('panelPriceField');
-    const unit2DFieldWrap = document.getElementById('unit2DFieldWrap');
-    const tolerance2DFieldWrap = document.getElementById('tolerance2DFieldWrap');
-    const toleranceUnit2DFieldWrap = document.getElementById('toleranceUnit2DFieldWrap');
-    const toleranceHint2D = document.getElementById('toleranceHint2D');
-
-    moveMultiToggleFirst('multiPanelToggle','paramGridMain2D');
-
-    if(multiPanelToggle.checked){
-      panelWidthFieldWrap.style.display = 'none';
-      panelHeightFieldWrap.style.display = 'none';
-      panelPriceField.style.display = 'none';
-
-      tolerance2DFieldWrap.style.order = '1';
-      toleranceUnit2DFieldWrap.style.order = '2';
-      unit2DFieldWrap.style.order = '3';
-      unit2DFieldWrap.style.gridColumn = '1 / -1';
-
-      if(toleranceHint2D) toleranceHint2D.style.display = 'none';
-    } else {
-      panelWidthFieldWrap.style.display = '';
-      panelHeightFieldWrap.style.display = '';
-      panelPriceField.style.display = '';
-
-      [panelWidthFieldWrap, panelHeightFieldWrap, panelPriceField, unit2DFieldWrap, tolerance2DFieldWrap, toleranceUnit2DFieldWrap].forEach(el=>{
-        el.style.order = '';
-        el.style.gridColumn = '';
-      });
-
-      if(toleranceHint2D) toleranceHint2D.style.display = '';
-    }
-  }
-
-  multiPanelToggle.addEventListener('change', () => {
-    const lengthFields = document.querySelectorAll('.length-related-2d');
-    if(multiPanelToggle.checked){
-      multiPanelPanel.classList.add('open');
-      lengthFields.forEach(f => f.classList.add('disabled'));
-    } else {
-      multiPanelPanel.classList.remove('open');
-      lengthFields.forEach(f => f.classList.remove('disabled'));
-    }
-    updatePanelLayout();
+  setupModeTabs({
+    stateCheckbox:'multiPanelToggle', singleBtn:'singlePanelToggleBtn', multiBtn:'multiPanelArrowBtn',
+    singleBody:'singlePanelBody', multiBody:'multiPanelBody', tolBlock:'tolBlock2D',
+    tolSlotSingle:'tolSlotSingle2D', tolSlotMulti:'tolSlotMulti2D', unitSlotMulti:'unitsRelocateTarget2D',
+    unitWraps:['unit2DFieldWrap','unit2DbFieldWrap'],
+    unitRestore:[['panelWidthFieldWrap','unit2DFieldWrap'],['panelHeightFieldWrap','unit2DbFieldWrap']],
+    singleText:'Medida única', multiText:'Varias medidas de plancha'
   });
 
   // seed examples
@@ -1694,14 +1828,7 @@
     return sheets.reduce((s, sh) => s + (parseFloat(sh.price) || 0), 0);
   }
 
-  function sheetsTotalWaste(sheets){
-    return sheets.reduce((s, sh) => {
-      const used = sh.placed.reduce((s2, p) => s2 + p.w*p.h, 0);
-      return s + (sh.width*sh.height - used);
-    }, 0);
-  }
-
-  function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate, priority){
+  function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate, priority, searchOpts){
     let items = [];
     pieces.forEach(p => {
       const w = parseFloat(p.width), h = parseFloat(p.height), qty = parseInt(p.qty, 10);
@@ -1727,7 +1854,13 @@
     }
 
     // Sort by decreasing area, then by longer side — standard nesting order.
-    items.sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH) || Math.max(b.origW,b.origH) - Math.max(a.origW,a.origH));
+    if(searchOpts && searchOpts.noise > 0){
+      // Modo "máxima calidad": un orden de piezas ligeramente distinto en cada intento.
+      items.forEach(it => { it.k = it.origW * it.origH * (1 + searchOpts.noise * (Math.random() - 0.5) * 2); });
+      items.sort((a,b) => b.k - a.k);
+    } else {
+      items.sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH) || Math.max(b.origW,b.origH) - Math.max(a.origW,a.origH));
+    }
 
     const packFn = method === 'guillotine' ? packGuillotine : packMaxRects;
 
@@ -1743,8 +1876,8 @@
     // tal cual se capturó — y esa primera decisión cambia todo el acomodo que
     // viene después. Para no depender de si el usuario escribió "3.5 × 2" o
     // "2 × 3.5", probamos el empaquetado completo también con todas las piezas
-    // volteadas 90° desde el inicio, y nos quedamos con el resultado que mejor
-    // cumpla la prioridad elegida (menor desperdicio o menor costo).
+    // volteadas 90° desde el inicio, y nos quedamos con el resultado que use
+    // menos planchas (o menos costo si empatan en planchas).
     const orientationVariants = allowRotate ? [items, items.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [items];
 
     // Para "corte libre" (MaxRects) probamos varias reglas de decisión —
@@ -1753,23 +1886,96 @@
     // sola regla fija (no aplica aquí).
     const rules = method === 'guillotine' ? [undefined] : ['bssf', 'blsf', 'baf', 'bl'];
 
-    let bestSheets = null, bestCost = Infinity, bestWaste = Infinity;
+    // Puntuación de un conjunto de planchas: [costo, área] o [área, costo] según la prioridad.
+    const scoreSheets = sheets => {
+      const cost = sheetsTotalCost(sheets);
+      const area = sheets.reduce((s,sh) => s + sh.width * sh.height, 0);
+      return priority === 'cost' ? [cost, area] : [area, cost];
+    };
+    const cmp = (x, y) => {
+      for(let i = 0; i < x.length; i++){
+        if(x[i] < y[i] - 1e-6) return -1;
+        if(x[i] > y[i] + 1e-6) return 1;
+      }
+      return 0;
+    };
+
+    // 1) Búsqueda principal: todas las combinaciones de orientación, regla y estrategia.
+    let candidates2D = [];
     orientationVariants.forEach(variantItems => {
       rules.forEach(rule => {
         strategies.forEach(fn => {
           const sheets = packFn(panelOptions, variantItems, fn, allowRotate, tolerance, rule);
-          const cost = sheetsTotalCost(sheets);
-          const waste = sheetsTotalWaste(sheets);
-          const better = !bestSheets || (priority === 'cost'
-            ? (cost < bestCost - 1e-6 || (Math.abs(cost-bestCost) < 1e-6 && waste < bestWaste - 1e-6))
-            : (waste < bestWaste - 1e-6 || (Math.abs(waste-bestWaste) < 1e-6 && cost < bestCost - 1e-6)));
-          if(better){
-            bestSheets = sheets;
-            bestCost = cost;
-            bestWaste = waste;
-          }
+          candidates2D.push({ sheets, score: scoreSheets(sheets) });
         });
       });
+    });
+    candidates2D.sort((p, q) => cmp(p.score, q.score));
+
+    // 2) Mejora posterior (mezcla de medidas). El acomodo inicial elige la medida de cada
+    // plancha en el momento de abrirla, sin saber qué piezas faltan. Aquí se corrige:
+    // cada plancha se reacomoda en la medida más conveniente, y se prueba juntar pares.
+    const sheetItems = sh => sh.placed.map(p => ({ label: p.label, color: p.color, origW: p.origW, origH: p.origH }));
+    const packSingle = (items, option) => {
+      // Si alguna pieza no cabe de ninguna forma en esta medida, no hay nada que probar.
+      const allFit = items.every(it =>
+        (it.origW <= option.width + 1e-9 && it.origH <= option.height + 1e-9) ||
+        (allowRotate && it.origH <= option.width + 1e-9 && it.origW <= option.height + 1e-9));
+      if(!allFit) return null;
+      const sorted = items.slice().sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH));
+      const variants = allowRotate ? [sorted, sorted.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [sorted];
+      let found = null;
+      variants.forEach(v => rules.forEach(rule => {
+        const res = packFn([option], v, cs => cs[0], allowRotate, tolerance, rule);
+        if(res.length === 1 && (!found || cmp(scoreSheets([res[0]]), scoreSheets([found])) < 0)) found = res[0];
+      }));
+      return found;
+    };
+    const t0 = Date.now();
+    const improve2D = sheets => {
+      sheets = sheets.slice();
+      let improved = true, guard = 0;
+      while(improved && guard++ < 30 && Date.now() - t0 < 4000){
+        improved = false;
+        // a) cada plancha sola, en otra medida
+        for(let i = 0; i < sheets.length && !improved; i++){
+          const cur = scoreSheets([sheets[i]]);
+          const items = sheetItems(sheets[i]);
+          let best = null, bestSc = cur;
+          panelOptions.forEach(opt => {
+            if(opt.width === sheets[i].width && opt.height === sheets[i].height && opt.price === sheets[i].price) return;
+            const r = packSingle(items, opt);
+            if(r){ const sc = scoreSheets([r]); if(cmp(sc, bestSc) < 0){ best = r; bestSc = sc; } }
+          });
+          if(best){ sheets[i] = best; improved = true; }
+        }
+        // b) juntar dos planchas en una sola
+        for(let i = 0; i < sheets.length && !improved; i++){
+          for(let j = i + 1; j < sheets.length && !improved; j++){
+            const cur = scoreSheets([sheets[i], sheets[j]]);
+            const items = sheetItems(sheets[i]).concat(sheetItems(sheets[j]));
+            let best = null, bestSc = cur;
+            panelOptions.forEach(opt => {
+              const r = packSingle(items, opt);
+              if(r){ const sc = scoreSheets([r]); if(cmp(sc, bestSc) < 0){ best = r; bestSc = sc; } }
+            });
+            if(best){ sheets.splice(j, 1); sheets[i] = best; improved = true; }
+          }
+        }
+      }
+      return sheets;
+    };
+
+    let bestSheets = null, bestScore = null;
+    const seen = new Set();
+    candidates2D.forEach(cand => {
+      if(seen.size >= 4) return;
+      const key = cand.sheets.map(s => s.width + 'x' + s.height + ':' + s.placed.length).sort().join('|');
+      if(seen.has(key)) return;
+      seen.add(key);
+      const improved = improve2D(cand.sheets);
+      const sc = scoreSheets(improved);
+      if(!bestSheets || cmp(sc, bestScore) < 0){ bestSheets = improved; bestScore = sc; }
     });
 
     return bestSheets;
@@ -1929,7 +2135,10 @@
     resultsSection2D.style.display = 'block';
   }
 
-  function calculate2D(){
+  let calc2DRunning = false, calc2DStop = false;
+
+  async function calculate2D(){
+    if(calc2DRunning) return;
     document.querySelectorAll('#pieces2DBody tr').forEach(tr => tr.classList.remove('row-err'));
     errBanner2D.style.display = 'none';
 
@@ -1972,9 +2181,52 @@
 
     try{
       const priority2D = document.querySelector('input[name="priority2D"]:checked').value;
-      const sheets = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D);
+      let sheets = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D);
       render2D(sheets, unit, showCost, method);
+
+      const quality = document.querySelector('input[name="quality2D"]:checked').value;
+      if(quality === 'max' && method === 'guillotine'){
+        calc2DRunning = true; calc2DStop = false;
+        const budgetMs = parseInt(document.getElementById('qualityTime2D').value, 10) * 1000;
+        const box = document.getElementById('qualityProgress2D');
+        const bar = document.getElementById('qualityBar2D');
+        const txt = document.getElementById('qualityText2D');
+        const stopBtn = document.getElementById('qualityStopBtn2D');
+        const calcBtn = document.getElementById('calc2DBtn');
+        box.style.display = 'block'; stopBtn.style.display = ''; calcBtn.disabled = true;
+
+        const score = s => {
+          const cost = sheetsTotalCost(s), area = s.reduce((a,x) => a + x.width * x.height, 0);
+          return priority2D === 'cost' ? [cost, area] : [area, cost];
+        };
+        let best = sheets, bestSc = score(sheets), attempts = 1, improved = false;
+        const t0 = Date.now();
+        try{
+          while(!calc2DStop && Date.now() - t0 < budgetMs){
+            await new Promise(r => setTimeout(r, 0));   // deja respirar a la página
+            const s = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D, { noise: 0.15 + 0.35 * Math.random() });
+            attempts++;
+            const sc = score(s);
+            if(cmpScore(sc, bestSc) < 0){ best = s; bestSc = sc; improved = true; }
+            const el = Date.now() - t0;
+            bar.style.width = Math.min(100, 100 * el / budgetMs) + '%';
+            txt.textContent = 'Buscando un mejor acomodo… ' + Math.round(el/1000) + ' / ' + (budgetMs/1000) + ' s · ' + attempts + ' intentos' + (improved ? ' · ya se encontró uno mejor' : '');
+          }
+        } finally {
+          bar.style.width = '100%'; stopBtn.style.display = 'none'; calcBtn.disabled = false;
+          calc2DRunning = false;
+        }
+        if(improved){
+          render2D(best, unit, showCost, method);
+          txt.textContent = 'Listo: ' + attempts + ' intentos. Se encontró un acomodo mejor que el del modo rápido.';
+        } else {
+          txt.textContent = 'Listo: ' + attempts + ' intentos. El acomodo rápido ya era el mejor que se encontró.';
+        }
+      } else {
+        document.getElementById('qualityProgress2D').style.display = 'none';
+      }
     } catch(e){
+      calc2DRunning = false; document.getElementById('calc2DBtn').disabled = false;
       errBanner2D.style.display = 'block';
       errBanner2D.textContent = e.message || 'No fue posible calcular la distribución.';
       resultsSection2D.style.display = 'none';
@@ -1982,6 +2234,15 @@
   }
 
   document.getElementById('calc2DBtn').addEventListener('click', calculate2D);
+  document.getElementById('qualityStopBtn2D').addEventListener('click', () => { calc2DStop = true; });
+
+  // El control de calidad solo aplica a guillotina
+  function updateQualityVisibility(){
+    const m = document.querySelector('input[name="cutMethod2D"]:checked').value;
+    document.getElementById('qualityRow').style.display = m === 'guillotine' ? '' : 'none';
+  }
+  document.querySelectorAll('input[name="cutMethod2D"]').forEach(r => r.addEventListener('change', updateQualityVisibility));
+  updateQualityVisibility();
 
   document.getElementById('cutlistToggle2D').addEventListener('click', function(){
     const cutlistTable2DEl = document.getElementById('cutlistTable2D');
