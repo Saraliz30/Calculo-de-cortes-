@@ -2,1240 +2,2226 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>100 IDIs Dijeron — Mesa de juego</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optimización de Cortes — Aprovechamiento de Material</title>
+<meta name="description" content="Calculadora gratuita para optimizar cortes de material: calcula cuántas piezas caben en tu tubo, perfil, viga, tabla o triplay y por dónde cortar para desperdiciar lo menos posible.">
+<meta name="keywords" content="optimización de cortes, calculadora de cortes, cutting stock, aprovechamiento de material, corte de triplay, corte de tubo, nesting">
+<meta property="og:title" content="Optimización de Cortes — Aprovechamiento de Material">
+<meta property="og:description" content="Calcula cuántas piezas caben en tu material y por dónde cortar, para cortes lineales y cortes en plano.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg-deep:#0e1a33;
-    --navy:#0e1a33;
-    --navy-2:#16264a;
-    --navy-3:#1d3161;
-    --gold:#f0b429;
-    --gold-2:#f7d174;
-    --rojo:#c8272c;
-    --rojo-2:#e34d43;
-    --cream:#f6efe0;
-    --ink:#0b1424;
-    --line: rgba(246,239,224,0.14);
-    --font-display:'Anton','Arial Narrow',Impact,sans-serif;
-    --font-body:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
-    box-sizing:border-box;
-    padding-top:env(safe-area-inset-top,0px);
-    padding-bottom:env(safe-area-inset-bottom,0px);
+    --paper:#E7E8EB;
+    --paper-line:#DDDEE2;
+    --ink:#2B2E33;
+    --ink-soft:#5C6068;
+    --ink-faint:#8D929A;
+    --moss:#4A4F57;
+    --accent:#3D434B;
+    --grid:#D3D5D9;
+    --card:#E7E8EB;
+    --ok:#4C6B54;
+    --err:#8C4A44;
+    --radius:16px;
+    --font-display:'Big Shoulders Display', sans-serif;
+    --font-hero:'Plus Jakarta Sans', sans-serif;
+    --shadow-light:#FFFFFF;
+    --shadow-dark:#B9BCC2;
   }
-  *,*::before,*::after{box-sizing:inherit;}
-  html{scroll-padding-top:env(safe-area-inset-top,0px);}
-  html,body{height:100%;}
+  *{box-sizing:border-box;}
   body{
     margin:0;
-    background:var(--navy);
-    color:var(--cream);
-    font-family:var(--font-body);
-    min-height:100%;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit;}
-  button{font-family:inherit;cursor:pointer;}
-  input,textarea{font-family:inherit;}
-
-  /* ============ layout switch ============ */
-  #controlView, #displayView{display:none;}
-  body.mode-control #controlView{display:block;}
-  body.mode-display #displayView{display:flex;}
-  body.mode-control #displayView{display:none;}
-  body.mode-display #controlView{display:none;}
-
-  /* ============ CONTROL VIEW ============ */
-  #controlView{
-    max-width:1280px;
-    margin:0 auto;
-    padding:28px 20px 80px;
-  }
-  .ctrl-header{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:16px;
-    flex-wrap:wrap;
-    margin-bottom:22px;
-    padding-bottom:18px;
-    border-bottom:1px solid var(--line);
-  }
-  .ctrl-header h1{
-    font-family:var(--font-display);
-    font-weight:400;
-    letter-spacing:0.5px;
-    font-size:clamp(26px,4vw,38px);
-    margin:0 0 4px;
-    color:var(--gold-2);
-  }
-  .ctrl-header p{margin:0;opacity:0.7;font-size:14px;max-width:46ch;}
-  .btn{
-    border:none;
-    border-radius:8px;
-    padding:11px 18px;
-    font-weight:700;
-    font-size:14.5px;
-    transition:transform .12s ease, filter .12s ease;
-  }
-  .btn:active{transform:translateY(1px);}
-  .btn-gold{background:var(--gold);color:var(--ink);}
-  .btn-gold:hover{filter:brightness(1.08);}
-  .btn-outline{background:transparent;color:var(--cream);border:1px solid var(--line);}
-  .btn-outline:hover{border-color:var(--gold);color:var(--gold-2);}
-  .btn-rojo{background:var(--rojo);color:var(--cream);}
-  .btn-rojo:hover{filter:brightness(1.1);}
-  .btn-sm{padding:6px 11px;font-size:13px;border-radius:6px;}
-  .btn:disabled{opacity:0.35;cursor:not-allowed;}
-
-  .grid2{
-    display:grid;
-    grid-template-columns:minmax(320px,420px) 1fr;
-    gap:24px;
-    align-items:start;
-  }
-  @media (max-width:880px){ .grid2{grid-template-columns:1fr;} }
-
-  .panel{
-    background:var(--navy-2);
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:18px 18px 20px;
-  }
-  .panel h2{
-    font-family:var(--font-display);
-    font-weight:400;
-    font-size:19px;
-    letter-spacing:0.3px;
-    margin:0 0 14px;
-    color:var(--gold-2);
-  }
-  .field-label{font-size:12px;text-transform:none;opacity:0.65;margin:0 0 4px;display:block;}
-  .text-input{
-    width:100%;
-    background:var(--navy-3);
-    border:1px solid var(--line);
-    color:var(--cream);
-    border-radius:7px;
-    padding:9px 11px;
-    font-size:14.5px;
-  }
-  .text-input:focus{outline:2px solid var(--gold);outline-offset:1px;}
-
-  /* -- live table (teams + pot) -- */
-  .teams-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:16px;}
-  .team-box{background:var(--navy-3);border-radius:10px;padding:10px 12px;text-align:center;}
-  .team-box input.team-name{
-    background:transparent;border:none;color:var(--gold-2);
-    font-family:var(--font-display);font-size:15px;text-align:center;width:100%;
-    border-bottom:1px dashed var(--line); padding-bottom:4px; margin-bottom:6px;
-  }
-  .team-score{font-family:var(--font-display);font-size:30px;color:var(--cream);}
-  .team-score-controls{display:flex;gap:6px;justify-content:center;margin-top:8px;}
-  .vs-label{font-size:12px;opacity:0.5;letter-spacing:1px;}
-  .pot-line{
-    display:flex;align-items:center;justify-content:space-between;
-    background:var(--navy-3);border-radius:10px;padding:10px 12px;margin-bottom:14px;
-  }
-  .pot-num{font-family:var(--font-display);font-size:24px;color:var(--gold);}
-
-  .no-round-msg{opacity:0.6;font-size:14px;padding:10px 2px;}
-
-  .live-question{
-    font-size:14.5px;
-    background:var(--navy-3);
-    border-radius:8px;
-    padding:10px 12px;
-    margin-bottom:12px;
-    min-height:20px;
-  }
-  .live-answers{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
-  .live-answer-row{
-    display:grid;
-    grid-template-columns:22px 1fr auto auto;
-    align-items:center;
-    gap:8px;
-    background:var(--navy-3);
-    border-radius:7px;
-    padding:7px 9px;
-    font-size:13.5px;
-  }
-  .live-answer-row .num{opacity:0.5;font-size:12px;}
-  .live-answer-row .rev-btn{
-    border:1px solid var(--line);background:transparent;color:var(--cream);
-    border-radius:5px;padding:4px 9px;font-size:12px;font-weight:700;
-  }
-  .live-answer-row.is-revealed{background:rgba(240,180,41,0.14);}
-  .live-answer-row.is-revealed .rev-btn{background:var(--gold);color:var(--ink);border-color:var(--gold);}
-  .live-answer-row .pts{font-weight:700;color:var(--gold-2);min-width:34px;text-align:right;}
-
-  .strikes-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
-  .strike-box{
-    width:34px;height:34px;border-radius:6px;border:1px solid var(--line);
-    display:flex;align-items:center;justify-content:center;font-family:var(--font-display);
-    font-size:18px;color:var(--line);background:var(--navy-3);
-  }
-  .strike-box.on{color:var(--rojo-2);border-color:var(--rojo-2);background:rgba(200,39,44,0.15);}
-
-  .assign-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
-  .live-actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;border-top:1px solid var(--line);padding-top:12px;}
-
-  /* -- rounds editor list -- */
-  .rounds-list{display:flex;flex-direction:column;gap:12px;max-height:none;}
-  .round-card{
-    background:var(--navy-3);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:12px 14px 14px;
-  }
-  .round-card.is-live{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
-  .round-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
-  .round-pill{font-size:11.5px;background:var(--navy-2);border-radius:20px;padding:3px 10px;opacity:0.75;}
-  .round-card.is-live .round-pill{background:var(--gold);color:var(--ink);opacity:1;font-weight:700;}
-  .round-card-actions{display:flex;gap:6px;}
-  .ans-editor-row{display:grid;grid-template-columns:1fr 68px auto;gap:6px;margin-bottom:6px;align-items:center;}
-  .ans-editor-row input.pts-input{text-align:center;}
-  .ans-editor-add{margin-top:2px;}
-  .icon-x{
-    background:transparent;border:none;color:var(--cream);opacity:0.55;
-    font-size:16px;padding:2px 6px;border-radius:5px;
-  }
-  .icon-x:hover{opacity:1;color:var(--rojo-2);background:rgba(200,39,44,0.15);}
-
-  .empty-state{
-    text-align:center;padding:32px 14px;opacity:0.65;font-size:14px;
-  }
-
-  .helper-note{
-    margin-top:18px;font-size:12.5px;opacity:0.55;line-height:1.5;
-  }
-  .popup-url{
-    word-break:break-all;font-size:12px;background:var(--navy-3);
-    border-radius:6px;padding:8px 10px;margin-top:8px;display:none;
-  }
-
-  /* ============ DISPLAY VIEW (look programa de TV) ============ */
-  :root{
-    --tv-blue:#1650d8;
-    --tv-gold:#ffcf33;
-    --tv-gold-2:#ffe27a;
-    --tv-red:#e0242b;
-  }
-  #displayView{
-    min-height:100vh;
     background:
-      repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 18px, rgba(255,255,255,0) 18px 36px),
-      radial-gradient(ellipse at 50% 0%, #2a63ff 0%, #0c2a8f 42%, #040d3a 100%);
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 28px,
+      var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    padding-bottom:80px;
+  }
+  .sheet{
+    max-width:980px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  /* ---- Title block, soft neumorphic card ---- */
+  .titleblock{
+    margin-top:28px;
+    position:relative;
+    border:none;
+    border-radius:calc(var(--radius) + 4px);
+    background:var(--card);
+    box-shadow:10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+    padding:6px 0;
+  }
+  .titleblock .cell{
+    padding:14px 22px;
+  }
+  .titleblock .big{
+    grid-row:span 2;
     display:flex;
     flex-direction:column;
-    align-items:center;
     justify-content:center;
-    padding:18px 24px;
-    position:relative;
-    overflow:hidden;
   }
-  .tv-title{text-align:center;margin-bottom:12px;}
-  .tv-title .main{
-    font-family:var(--font-display);
-    font-size:clamp(34px,6vw,76px);
+  .titleblock .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .titleblock .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    font-weight:500;
+  }
+  .titleblock h1{
+    font-family:var(--font-hero);
+    font-size:36px;
+    margin:0 0 4px 0;
+    letter-spacing:-0.02em;
+    text-transform:none;
+    font-weight:800;
     line-height:1;
-    letter-spacing:2px;
-    color:var(--tv-gold);
-    text-shadow:0 2px 0 #b8741a, 0 4px 0 #8a4a10, 0 6px 0 #5e2f0a, 0 12px 26px rgba(0,0,0,0.6);
   }
-  .tv-stage{
-    width:100%;
-    max-width:1300px;
-    display:grid;
-    grid-template-columns:clamp(150px,15vw,210px) 1fr clamp(150px,15vw,210px);
-    gap:18px;
-    align-items:center;
+  .titleblock .sub{
+    color:var(--ink-soft);
+    font-size:12.5px;
   }
-  @media (max-width:980px){
-    .tv-stage{grid-template-columns:1fr 1fr;}
-    .board-frame{grid-column:1/-1;order:-1;}
-  }
-  .team-plate{
-    background:linear-gradient(180deg,#0e1f6b,#050f45);
-    border:3px solid var(--tv-gold);
-    border-radius:16px;
-    padding:12px 10px 14px;
-    text-align:center;
-    box-shadow:0 10px 24px rgba(0,0,0,0.45);
-  }
-  .team-plate .name{
-    font-family:var(--font-display);
-    font-size:clamp(16px,1.8vw,24px);
-    color:var(--tv-gold-2);
-    text-transform:uppercase;
-    letter-spacing:1px;
-    margin-bottom:8px;
-    word-break:break-word;
-  }
-  .score-box{
-    background:#000;
-    border:3px solid #7a5a10;
-    border-radius:10px;
-    font-family:var(--font-display);
-    color:var(--tv-gold);
-    font-size:clamp(44px,6vw,84px);
-    line-height:1.1;
-    padding:4px 0;
-    text-shadow:0 0 14px rgba(255,207,51,0.55);
-  }
-  .board-frame{
-    position:relative;
-    background:linear-gradient(180deg,#2e6bff,#0c3bb8 60%,#082a8c);
-    border:6px solid var(--tv-gold);
-    border-radius:26px;
-    padding:24px 22px 18px;
-    box-shadow:0 0 0 4px #7a4a10, 0 18px 50px rgba(0,0,0,0.55), inset 0 0 40px rgba(0,0,60,0.55);
-  }
-  .board-frame::before{
-    content:"";
-    position:absolute;
-    inset:5px;
-    border:4px dotted rgba(255,244,176,0.85);
-    border-radius:20px;
-    pointer-events:none;
-  }
-  #displayBody{position:relative;}
-  .board-question{
-    text-align:center;
-    background:linear-gradient(180deg,#07166a,#030c3d);
-    border:3px solid var(--tv-gold);
-    border-radius:12px;
-    padding:12px 18px;
-    font-family:var(--font-display);
-    font-size:clamp(17px,2.4vw,30px);
-    letter-spacing:0.5px;
-    color:#fff;
-    text-transform:uppercase;
+
+  /* ---- Sections ---- */
+  section{margin-top:26px;}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
     margin-bottom:14px;
+    border-bottom:1px solid var(--paper-line);
+    padding-bottom:8px;
   }
-  .board-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-auto-flow:column;
-    gap:12px 16px;
-  }
-  @media (max-width:720px){
-    .board-grid{grid-auto-flow:row;grid-template-columns:1fr;grid-template-rows:none !important;}
-  }
-  .board-slot{
-    position:relative;
-    height:clamp(50px,9vh,84px);
-    border-radius:12px;
-    background:linear-gradient(180deg,#3d7bff,#1446c9 55%,#0b2f9a);
-    border:3px solid #cfe0ff;
-    box-shadow:inset 0 2px 0 rgba(255,255,255,0.35), 0 5px 0 #061a63, 0 8px 14px rgba(0,0,0,0.4);
-    overflow:hidden;
-  }
-  .slot-hidden{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-  .slot-hidden span{
-    min-width:clamp(40px,5vw,60px);
-    text-align:center;
-    background:linear-gradient(180deg,#0a1a70,#040d44);
-    border:2px solid var(--tv-gold);
-    color:var(--tv-gold-2);
+  .section-num{
     font-family:var(--font-display);
-    font-size:clamp(20px,2.8vw,34px);
-    border-radius:50px;
-    padding:0 14px;
+    font-size:14px;
+    color:var(--ink-soft);
+    background:var(--card);
+    box-shadow:3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+    border-radius:8px;
+    font-weight:800;
+    padding:2px 9px 3px;
     line-height:1.3;
   }
-  .slot-reveal{position:absolute;inset:0;display:none;align-items:stretch;}
-  .slot-text{
-    flex:1;
-    display:flex;
-    align-items:center;
-    padding:0 14px;
-    font-family:var(--font-display);
-    font-size:clamp(15px,2.2vw,28px);
-    line-height:1.05;
-    color:#fff;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-    text-shadow:0 2px 0 rgba(0,0,40,0.6);
-    overflow:hidden;
-  }
-  .slot-pts{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-width:clamp(52px,6vw,84px);
-    background:#000;
-    color:var(--tv-gold);
-    font-family:var(--font-display);
-    font-size:clamp(22px,3vw,40px);
-    border-left:3px solid #cfe0ff;
-  }
-  .board-slot.revealed .slot-hidden{display:none;}
-  .board-slot.revealed .slot-reveal{display:flex;}
-  .board-slot.flip{animation:flipReveal .5s ease;}
-  @keyframes flipReveal{
-    0%{transform:rotateX(90deg);}
-    100%{transform:rotateX(0deg);}
+  .section-head h2{
+    font-family:var(--font-hero);
+    font-size:19px;
+    margin:0;
+    text-transform:none;
+    letter-spacing:-0.01em;
+    font-weight:800;
   }
 
-  .total-row{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:18px;}
-  .total-label{font-family:var(--font-display);color:#fff;font-size:clamp(18px,2.4vw,30px);letter-spacing:2px;}
-  .total-box{
-    background:#000;
-    border:3px solid var(--tv-gold);
+  .panel{
+    background:var(--card);
+    border:none;
+    border-radius:var(--radius);
+    box-shadow:8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+    padding:22px;
+  }
+
+  .param-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:14px 16px;
+  }
+  .toggle-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--grid);
+  }
+  .toggle-row input[type=checkbox]{
+    width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--accent);
+  }
+  .toggle-row .toggle-text label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .toggle-row .toggle-text .hint{margin-top:2px;}
+  .mode-tab{
+    border-top:1px dashed var(--grid);
+    padding:12px 0 6px;
+    margin-top:6px;
+  }
+  .mode-tab-btn{
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--ink);
+    letter-spacing:.01em;
+  }
+  .mode-badge{
+    margin-left:10px;
+    padding:1px 8px;
     border-radius:10px;
-    color:var(--tv-gold);
-    font-family:var(--font-display);
-    font-size:clamp(30px,4.4vw,56px);
-    padding:0 22px;
-    min-width:clamp(90px,10vw,140px);
-    text-align:center;
+    background:var(--accent);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    vertical-align:1px;
   }
-  .strike-indicator{display:flex;justify-content:center;gap:10px;margin-top:12px;}
-  .si-box{
-    width:clamp(34px,4vw,52px);
-    height:clamp(34px,4vw,52px);
-    border-radius:8px;
-    border:2px solid rgba(255,255,255,0.35);
-    display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-display);
-    font-size:clamp(22px,3vw,36px);
-    color:rgba(255,255,255,0.25);
-    background:rgba(0,0,0,0.25);
-  }
-  .si-box.on{color:#fff;background:var(--tv-red);border-color:#fff;box-shadow:0 0 16px rgba(224,36,43,0.8);}
-
-  .strikes-display{
-    position:fixed;
-    inset:0;
+  .mode-tab-body{margin-top:12px;}
+  .tol-block{margin-top:14px;}
+  .group-head{
+    margin:52px 0 20px;
     display:flex;
     align-items:center;
-    justify-content:center;
-    gap:clamp(10px,2.5vw,32px);
-    pointer-events:none;
-    opacity:0;
-    z-index:20;
-    background:rgba(0,0,20,0.35);
+    gap:14px;
+    padding-bottom:14px;
+    border-bottom:2px solid var(--ink);
   }
-  .strikes-display.flash{animation:strikeFlash 1.6s ease forwards;}
-  .strikes-display .big-x{
-    font-family:var(--font-display);
+  .group-head .section-num{
+    font-size:20px;
+    padding:5px 14px 6px;
+    background:var(--ink);
+    color:#fff;
+    box-shadow:none;
+  }
+  .group-head .group-title{
+    font-family:var(--font-hero);
+    font-size:30px;
+    font-weight:800;
+    letter-spacing:-0.02em;
+    color:var(--ink);
+  }
+  .sheet-block{
+    margin-top:22px;
+    border:1px solid var(--grid);
+    background:var(--card);
+    padding:14px 16px 16px;
+  }
+  .sheet-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:'IBM Plex Mono', monospace;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+    gap:4px;
+  }
+  .sheet-head .sheet-id{font-weight:700;font-size:13.5px;}
+  .sheet-head .sheet-meta{font-size:11.5px;color:var(--ink-soft);}
+  .sheet-svg-wrap{width:100%;border-radius:14px;overflow:hidden;box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);}
+  .sheet-svg-wrap svg{width:100%;height:auto;display:block;}
+  table.costBreakdown{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:14px;
+  }
+  table.costBreakdown th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    padding:6px 8px;
+    border-bottom:1.5px solid var(--ink-faint);
+  }
+  table.costBreakdown td{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:6px 8px;
+    border-bottom:1px solid var(--grid);
+  }
+  table.costBreakdown tfoot td{
+    font-weight:700;
+    border-top:1.5px solid var(--ink-faint);
+    border-bottom:none;
+  }
+  .field{
+    flex:1;
+    min-width:150px;
+  }
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input[type=number], .field input[type=text], .field select{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid #CDD0D5;
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:10px;
+    box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+  .field input:focus, .field select:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+    border-color:var(--ink);
+  }
+  .hint{
+    font-size:11.5px;
+    color:var(--ink-faint);
+    margin-top:5px;
+  }
+
+  /* ---- Pieces table ---- */
+  table.pieces{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:4px;
+  }
+  table.pieces th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--ink-soft);
+    padding:6px 8px;
+    border-bottom:1.5px solid var(--ink-faint);
+  }
+  table.pieces td{
+    padding:5px 8px;
+    border-bottom:1px solid var(--grid);
+    vertical-align:middle;
+  }
+  table.pieces input{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    padding:6px 8px;
+    border:1px solid #B7C2C9;
+    border-radius:var(--radius);
+  }
+  table.pieces input:focus{
+    outline:2px solid var(--moss);
+    outline-offset:1px;
+  }
+  .swatch{
+    width:11px;height:11px;border-radius:2px;display:inline-block;margin-right:6px;flex-shrink:0;
+  }
+  .col-color{width:20px;}
+  .col-qty{width:70px;}
+  .col-len{width:110px;}
+  .col-del{width:36px;text-align:center;}
+  .row-err td{background:#FCEBE8;}
+
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    border:none;
+    background:var(--card);
+    color:var(--ink);
+    padding:9px 18px;
+    cursor:pointer;
+    border-radius:12px;
+    box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+    transition:box-shadow .12s, color .12s;
+  }
+  .btn:hover{color:var(--ink);box-shadow:2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);}
+  .btn:active{box-shadow:inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);}
+  .collapse-toggle-btn{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    padding:2px 0;
+  }
+  .collapse-toggle-btn:hover{color:var(--ink);}
+
+  .btn-del{
+    border:none;
+    background:none;
+    color:var(--ink-faint);
+    font-size:16px;
+    cursor:pointer;
     line-height:1;
-    color:var(--tv-red);
-    -webkit-text-stroke:6px #fff;
-    paint-order:stroke fill;
-    text-shadow:0 0 40px rgba(224,36,43,0.9);
+    padding:4px;
+    box-shadow:none;
   }
-  @keyframes strikeFlash{
-    0%{opacity:0;transform:scale(0.6);}
-    10%{opacity:1;transform:scale(1.06);}
-    18%{transform:scale(1);}
-    80%{opacity:1;}
-    100%{opacity:0;}
-  }
+  .btn-del:hover{color:var(--err);}
 
-  .display-exit{position:fixed;top:10px;right:12px;opacity:0.25;font-size:12px;z-index:30;}
-  .display-exit:hover{opacity:0.8;}
-  .sound-hint{
-    position:fixed;left:12px;bottom:12px;z-index:30;
-    background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,0.3);
-    border-radius:8px;padding:8px 12px;font-size:13px;
-  }
-  .board-empty{text-align:center;color:#fff;opacity:0.8;font-size:clamp(16px,2vw,22px);padding:40px 0;}
+  .btn-add{margin-top:12px;}
 
-  /* ---- pantalla de inicio ---- */
-  #startScreen{
-    position:fixed;
-    inset:0;
-    z-index:15;
-    display:none;
+  .btn-primary{
+    background:var(--accent);
+    color:#fff;
+    font-size:14px;
+    padding:14px 28px;
+    font-weight:600;
+    box-shadow:5px 5px 12px var(--shadow-dark), -3px -3px 10px var(--shadow-light);
+  }
+  .btn-primary:hover{background:#2C3138;color:#fff;box-shadow:2px 2px 6px var(--shadow-dark), -1px -1px 5px var(--shadow-light);}
+
+  .calc-bar{
+    margin-top:22px;
+    display:flex;
     align-items:center;
-    justify-content:center;
-    background:
-      repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 18px, rgba(255,255,255,0) 18px 36px),
-      radial-gradient(ellipse at 50% 0%, #2a63ff 0%, #0c2a8f 42%, #040d3a 100%);
+    gap:16px;
   }
-  #startScreen.on{display:flex;}
-  #startScreen img{width:100%;height:100%;object-fit:contain;display:none;}
-  .start-title{text-align:center;}
-  .start-title .main{
-    font-family:var(--font-display);
-    font-size:clamp(40px,9vw,150px);
-    line-height:1;
-    letter-spacing:3px;
-    color:var(--tv-gold);
-    text-shadow:0 3px 0 #b8741a, 0 6px 0 #8a4a10, 0 9px 0 #5e2f0a, 0 16px 34px rgba(0,0,0,0.6);
+
+  .banner-err{
+    margin-top:16px;
+    border:1.5px solid var(--err);
+    background:#FCEBE8;
+    color:var(--err);
+    padding:10px 14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    display:none;
   }
-  /* ---- bloque de inicio en el panel ---- */
-  .start-block{background:var(--navy-3);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:16px;}
-  .start-block h3{margin:0 0 8px;font-family:var(--font-display);font-weight:400;font-size:15px;color:var(--gold-2);letter-spacing:0.3px;}
-  .start-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
-  .start-thumb{display:none;width:100%;max-height:110px;object-fit:contain;background:#0a1430;border-radius:6px;margin-bottom:10px;}
-  label.btn{display:inline-block;}
-  .version-warn{display:none;position:fixed;top:0;left:0;right:0;z-index:40;background:#e0242b;color:#fff;text-align:center;padding:8px 12px;font-size:14px;font-weight:700;}
-  .board-question.is-hidden{opacity:0.9;letter-spacing:10px;color:var(--tv-gold-2);}
-  .board-question.flip{animation:flipReveal .5s ease;}
+
+  /* ---- Results ---- */
+  #results{display:none;}
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:16px;
+    background:transparent;
+    border:none;
+  }
+  .summary-card{
+    background:var(--card);
+    border-radius:14px;
+    box-shadow:6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+    padding:16px 14px;
+  }
+  .summary-card .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink-soft);
+  }
+  .summary-card .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:26px;
+    font-weight:600;
+    margin-top:6px;
+  }
+  .summary-card .unit{
+    font-size:13px;
+    color:var(--ink-soft);
+    font-weight:400;
+  }
+  .summary-card.accent .value{color:var(--accent);}
+  .summary-card.ok .value{color:var(--ok);}
+
+  .tube-block{
+    margin-top:22px;
+    border:1px solid var(--grid);
+    background:var(--card);
+    padding:14px 16px 16px;
+  }
+  .tube-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:'IBM Plex Mono', monospace;
+    margin-bottom:10px;
+  }
+  .tube-head .tube-id{
+    font-weight:700;
+    font-size:13.5px;
+  }
+  .tube-head .tube-meta{
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+  .tube-svg-wrap{width:100%;}
+  .tube-svg-wrap svg{width:100%;height:auto;display:block;}
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 18px;
+    margin-top:18px;
+    padding-top:12px;
+    border-top:1px dashed var(--grid);
+  }
+  .legend-item{
+    display:flex;
+    align-items:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+
+  .cut-order{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px dashed var(--grid);
+  }
+  .cut-order-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--accent);
+    font-weight:700;
+    margin-bottom:6px;
+  }
+  .cut-order ol{
+    margin:0;
+    padding-left:20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+  .cut-order li{
+    padding:2px 0;
+  }
+  .cut-order li::marker{
+    color:var(--accent);
+    font-weight:700;
+  }
+  .cutlist-toggle{
+    margin-top:24px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--moss);
+    cursor:pointer;
+    text-decoration:underline;
+    display:inline-block;
+  }
+  table.cutlist{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:14px;
+    display:none;
+  }
+  table.cutlist th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    padding:6px 8px;
+    border-bottom:1.5px solid var(--ink-faint);
+  }
+  table.cutlist td{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:5px 8px;
+    border-bottom:1px solid var(--grid);
+  }
+
+
+  footer{
+    max-width:980px;
+    margin:40px auto 0;
+    padding:14px 24px 0;
+    border-top:1px solid var(--grid);
+    color:var(--ink-faint);
+    font-size:11px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  @media (max-width:700px){
+    .summary-grid{grid-template-columns:1fr 1fr;}
+    .col-color{display:none;}
+  }
+
+  @media print{
+    body{background:#fff;}
+    .btn, .btn-add, .btn-del, .cutlist-toggle{display:none !important;}
+    table.cutlist{display:table !important;}
+  }
 </style>
 </head>
 <body>
+<div class="sheet">
 
-<!-- ============================================================ -->
-<!-- CONTROL VIEW                                                   -->
-<!-- ============================================================ -->
-<div id="controlView">
-  <div class="ctrl-header">
-    <div>
-      <h1>100 IDIs Dijeron — Panel de control</h1>
-      <p>Edita las rondas, controla el marcador y proyecta el tablero en otra pantalla para el público.</p>
-    </div>
-    <div>
-      <a class="btn btn-gold" id="openDisplayBtn" href="#display" target="_blank" rel="noopener">Abrir pantalla de proyección ↗</a>
-      <button class="btn btn-outline btn-sm" id="copyDisplayUrlBtn" style="margin-left:6px;">Copiar enlace</button>
-      <div class="popup-url" id="popupUrlHint" style="display:block;"></div>
+  <div class="titleblock">
+    <div class="cell big">
+      <h1>Optimización de cortes</h1>
+      <div class="sub">Calcula cuántas piezas caben en tu material y por dónde cortar — para cortes lineales (tubo, perfil, viga, tabla, cable) y cortes en plano (triplay, tela, lámina).</div>
     </div>
   </div>
 
-  <div class="grid2">
-    <!-- LIVE CONTROL -->
-    <div class="panel" id="livePanel">
-      <h2>Mesa en vivo</h2>
+  <div class="group-head"><span class="section-num">01</span><span class="group-title">Cortes lineales</span></div>
 
-      <div class="start-block">
-        <h3>Pantalla de inicio</h3>
-        <div class="start-row">
-          <label class="btn btn-outline btn-sm" for="startImgInput">📷 Elegir foto</label>
-          <input type="file" id="startImgInput" accept="image/*" style="display:none">
-          <button class="btn btn-outline btn-sm" id="clearStartImgBtn">Quitar foto</button>
-        </div>
-        <img class="start-thumb" id="startThumb" alt="Vista previa de la foto de inicio">
-        <button class="btn btn-gold" id="toggleStartBtn" style="width:100%;">▶ Iniciar juego (Enter)</button>
-        <div class="field-label" id="startStatus" style="margin:8px 0 0;"></div>
-      </div>
-
-      <div class="teams-row">
-        <div class="team-box">
-          <input class="text-input team-name" id="team1Name" maxlength="20" value="Equipo 1">
-          <div class="team-score" id="team1Score">0</div>
-          <div class="team-score-controls">
-            <button class="btn btn-outline btn-sm" data-team="0" data-delta="-10">−10</button>
-            <button class="btn btn-outline btn-sm" data-team="0" data-delta="10">+10</button>
-          </div>
-        </div>
-        <div class="vs-label">VS</div>
-        <div class="team-box">
-          <input class="text-input team-name" id="team2Name" maxlength="20" value="Equipo 2">
-          <div class="team-score" id="team2Score">0</div>
-          <div class="team-score-controls">
-            <button class="btn btn-outline btn-sm" data-team="1" data-delta="-10">−10</button>
-            <button class="btn btn-outline btn-sm" data-team="1" data-delta="10">+10</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="pot-line">
-        <span class="field-label" style="margin:0;">Puntos en juego (bolsa)</span>
-        <span class="pot-num" id="potNum">0</span>
-      </div>
-
-      <div id="liveRoundArea">
-        <div class="no-round-msg">Elige una ronda de la lista de la derecha con "Presentar" para empezar.</div>
-      </div>
-
-      <div class="helper-note">
-        Los cambios que hagas aquí se reflejan al instante en la pantalla de proyección. Ábrela con el botón de arriba y colócala en el segundo monitor o proyector.
-      </div>
+  <!-- SECTION 1: parámetros generales -->
+  <section>
+    <div class="section-head">
+      <h2>Medidas del material base</h2>
     </div>
-
-    <!-- ROUNDS EDITOR -->
     <div class="panel">
-      <h2>Rondas</h2>
-      <div class="rounds-list" id="roundsList"></div>
-      <button class="btn btn-outline" id="addRoundBtn" style="margin-top:12px;width:100%;">+ Agregar ronda</button>
-    </div>
-  </div>
-</div>
+      <input type="checkbox" id="multiLengthToggle" style="display:none" tabindex="-1" aria-hidden="true">
 
-<!-- ============================================================ -->
-<!-- DISPLAY VIEW                                                   -->
-<!-- ============================================================ -->
-<div id="displayView">
-  <a href="#" class="display-exit" id="displayExit">panel de control</a>
-  <div class="tv-title"><div class="main">100 IDIS DIJERON</div></div>
-  <div class="tv-stage">
-    <div class="team-plate">
-      <div class="name" id="dTeam1Name">Equipo 1</div>
-      <div class="score-box" id="dTeam1Score">0</div>
-    </div>
-    <div class="board-frame">
-      <div id="displayBody">
-        <div class="board-empty">Esperando la siguiente ronda…</div>
+      <div class="mode-tab">
+        <button type="button" id="singleLengthToggleBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="singleLengthBody" class="mode-tab-body">
+          <div class="param-grid">
+<div class="field" id="stockLengthFieldWrap">
+          <label for="stockLength">Longitud del material</label>
+          <input type="number" id="stockLength" min="0.01" step="any" value="96">
+        </div>
+<div class="field" id="unitFieldWrap">
+          <label for="unit">Unidad</label>
+          <select id="unit">
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="in" selected>in</option>
+            <option value="ft">ft</option>
+          </select>
+        </div>
+<div class="field">
+          <label for="stockPrice">Precio del material (opcional)</label>
+          <input type="number" id="stockPrice" min="0" step="any" placeholder="0.00">
+        </div>
+          </div>
+          <p class="hint">Si dejas el precio en blanco, la calculadora solo muestra el conteo de piezas, sin costos.</p>
+          <div id="tolSlotSingleLinear">
+            <div id="tolBlockLinear" class="tol-block">
+              <div class="param-grid">
+<div class="field">
+          <label for="tolerance">Tolerancia por corte</label>
+          <input type="number" id="tolerance" min="0" step="any" value="3">
+        </div>
+<div class="field">
+          <label for="toleranceUnit">Unidad de tolerancia</label>
+          <select id="toleranceUnit">
+            <option value="mm" selected>mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="in">in</option>
+            <option value="ft">ft</option>
+          </select>
+        </div>
+              </div>
+              <p class="hint">La tolerancia se descuenta por cada pieza cortada (ancho de sierra/disco + margen de seguridad). Puede ir en una unidad distinta a la del material; se convierte automáticamente.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mode-tab">
+        <button type="button" id="multiLengthArrowBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="multiLengthBody" class="mode-tab-body" style="display:none;">
+          <p class="hint" style="margin-bottom:12px;">La calculadora decide por sí sola qué longitud conviene usar en cada corte (una más chica, más larga, o una combinación), cada una con su precio.</p>
+          <div class="param-grid" id="unitsRelocateTarget" style="margin-bottom:14px;"></div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las longitudes?</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priorityLinear" value="cost" checked style="accent-color:var(--accent);"> Menor costo total
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priorityLinear" value="material" style="accent-color:var(--accent);"> Menor desperdicio de material
+            </label>
+          </div>
+        </div>
+        <table class="pieces">
+          <thead>
+            <tr>
+              <th>Longitud (<span id="stockUnitLabel">mm</span>)</th>
+              <th>Precio por pieza</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="stockOptsBody"></tbody>
+        </table>
+        <button class="btn btn-add" id="addStockBtn">+ Añadir longitud</button>
+          <div id="tolSlotMultiLinear"></div>
+        </div>
       </div>
     </div>
-    <div class="team-plate">
-      <div class="name" id="dTeam2Name">Equipo 2</div>
-      <div class="score-box" id="dTeam2Score">0</div>
+  </section>
+
+  <!-- SECTION 2: piezas -->
+  <section>
+    <div class="section-head">
+      <h2>Piezas requeridas</h2>
+    </div>
+    <div class="panel">
+      <table class="pieces">
+        <thead>
+          <tr>
+            <th class="col-color"></th>
+            <th>Etiqueta</th>
+            <th class="col-len">Longitud</th>
+            <th class="col-qty">Cantidad</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="piecesBody"></tbody>
+      </table>
+      <button class="btn btn-add" id="addPieceBtn">+ Añadir pieza</button>
+    </div>
+  </section>
+
+  <div class="calc-bar">
+    <button class="btn btn-primary" id="calcBtn">Calcular optimización</button>
+    <span class="hint">Ctrl/Cmd + Enter también calcula.</span>
+  </div>
+  <div class="banner-err" id="errBanner"></div>
+
+  <!-- SECTION 3: resultados -->
+  <section id="results">
+    <div class="section-head">
+      <h2>Resultado: plan de corte</h2>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div id="costSlot"></div>
+
+    <div id="tubesContainer"></div>
+
+    <span class="cutlist-toggle" id="cutlistToggle">▸ Ver lista de corte en formato tabla (para imprimir)</span>
+    <table class="cutlist" id="cutlistTable">
+      <thead>
+        <tr><th>Barra #</th><th>Pieza</th><th>Longitud</th><th>Posición acumulada</th></tr>
+      </thead>
+      <tbody id="cutlistBody"></tbody>
+    </table>
+  </section>
+
+  <div class="group-head"><span class="section-num">02</span><span class="group-title">Cortes en plano</span></div>
+
+  <div id="section2D">
+
+  <!-- SECTION 4: parámetros de la plancha -->
+  <section>
+    <div class="section-head">
+      <h2>Medidas del material base</h2>
+    </div>
+    <div class="panel">
+      <input type="checkbox" id="multiPanelToggle" style="display:none" tabindex="-1" aria-hidden="true">
+
+      <div class="mode-tab">
+        <button type="button" id="singlePanelToggleBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="singlePanelBody" class="mode-tab-body">
+          <div class="param-grid">
+<div class="field" id="panelWidthFieldWrap">
+          <label for="panelWidth">Ancho de la plancha</label>
+          <input type="number" id="panelWidth" min="0.01" step="any" value="96">
+        </div>
+<div class="field" id="unit2DFieldWrap">
+          <label for="unit2D">Unidad</label>
+          <select id="unit2D">
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="in" selected>in</option>
+            <option value="ft">ft</option>
+          </select>
+        </div>
+<div class="field" id="panelHeightFieldWrap">
+          <label for="panelHeight">Alto de la plancha</label>
+          <input type="number" id="panelHeight" min="0.01" step="any" value="48">
+        </div>
+<div class="field">
+          <label for="panelPrice">Precio de la plancha (opcional)</label>
+          <input type="number" id="panelPrice" min="0" step="any" placeholder="0.00">
+        </div>
+          </div>
+          <p class="hint">Si dejas el precio en blanco, la calculadora solo muestra el acomodo, sin costos.</p>
+          <div id="tolSlotSingle2D">
+            <div id="tolBlock2D" class="tol-block">
+              <div class="param-grid">
+<div class="field">
+          <label for="tolerance2D">Tolerancia de corte</label>
+          <input type="number" id="tolerance2D" min="0" step="any" value="3">
+        </div>
+<div class="field">
+          <label for="toleranceUnit2D">Unidad de tolerancia</label>
+          <select id="toleranceUnit2D">
+            <option value="mm" selected>mm</option>
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="in">in</option>
+            <option value="ft">ft</option>
+          </select>
+        </div>
+              </div>
+              <p class="hint">La tolerancia se descuenta alrededor de cada pieza (grosor de disco/sierra + margen). Puede ir en una unidad distinta a la de la plancha.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mode-tab">
+        <button type="button" id="multiPanelArrowBtn" class="collapse-toggle-btn mode-tab-btn"></button>
+        <div id="multiPanelBody" class="mode-tab-body" style="display:none;">
+          <p class="hint" style="margin-bottom:12px;">La calculadora decide qué medida conviene usar en cada plancha, cada una con su precio.</p>
+          <div class="param-grid" id="unitsRelocateTarget2D" style="margin-bottom:14px;"></div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;margin-bottom:8px;">¿Qué priorizar al elegir entre las medidas?</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priority2D" value="material" checked style="accent-color:var(--accent);"> Menor desperdicio de material
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="priority2D" value="cost" style="accent-color:var(--accent);"> Menor costo total
+            </label>
+          </div>
+        </div>
+        <table class="pieces">
+          <thead>
+            <tr>
+              <th>Ancho (<span id="panelUnitLabel">mm</span>)</th>
+              <th>Alto</th>
+              <th>Precio por plancha</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="panelOptsBody"></tbody>
+        </table>
+        <button class="btn btn-add" id="addPanelBtn">+ Añadir medida</button>
+          <div id="tolSlotMulti2D"></div>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="grainToggle" checked>
+        <div class="toggle-text">
+          <label for="grainToggle">Respetar veta / dirección — no rotar piezas 90°</label>
+          <p class="hint">Actívalo para madera (triplay, tablones) cuando todos los rectángulos deben quedar con su lado horizontal paralelo al horizontal de la plancha. Desactívalo para tela o lámina sin dirección, así la calculadora puede rotar piezas 90° si eso aprovecha mejor el material.</p>
+        </div>
+      </div>
+
+      <div class="toggle-row" style="border-top:none;padding-top:0;margin-top:14px;">
+        <div class="toggle-text" style="width:100%;">
+          <label style="display:block;margin-bottom:8px;">Método de corte</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="cutMethod2D" value="guillotine" checked style="accent-color:var(--accent);"> Guillotina (corte de lado a lado)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="cutMethod2D" value="maxrects" style="accent-color:var(--accent);"> Empaquetado libre (mejor aprovechamiento)
+            </label>
+          </div>
+          <p class="hint">Guillotina: cada corte atraviesa toda la plancha, como con sierra de mesa o circular — más realista para taller. Empaquetado libre: acomoda piezas donde mejor quepan, sin esa restricción — más aprovechamiento, pero puede requerir cortes en varias pasadas.</p>
+        </div>
+      </div>
+
+      <div class="toggle-row" id="qualityRow" style="border-top:none;padding-top:0;margin-top:14px;">
+        <div class="toggle-text" style="width:100%;">
+          <label style="display:block;margin-bottom:8px;">Calidad del cálculo</label>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="quality2D" value="fast" checked style="accent-color:var(--accent);"> Rápido
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="quality2D" value="max" style="accent-color:var(--accent);"> Máxima calidad, durante
+            </label>
+            <select id="qualityTime2D" style="width:auto;">
+              <option value="5">5 segundos</option>
+              <option value="15" selected>15 segundos</option>
+              <option value="30">30 segundos</option>
+              <option value="60">60 segundos</option>
+            </select>
+          </div>
+          <p class="hint">Solo para guillotina: prueba muchos órdenes de piezas y conserva el mejor acomodo. Nunca queda peor que el modo rápido, y puedes detenerlo en cualquier momento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: piezas 2D -->
+  <section>
+    <div class="section-head">
+      <h2>Piezas requeridas (rectángulos)</h2>
+    </div>
+    <div class="panel">
+      <table class="pieces">
+        <thead>
+          <tr>
+            <th class="col-color"></th>
+            <th>Etiqueta</th>
+            <th class="col-len">Ancho</th>
+            <th class="col-len">Alto</th>
+            <th class="col-qty">Cantidad</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="pieces2DBody"></tbody>
+      </table>
+      <button class="btn btn-add" id="addPiece2DBtn">+ Añadir pieza</button>
+    </div>
+  </section>
+
+  <div class="calc-bar">
+    <button class="btn btn-primary" id="calc2DBtn">Calcular optimización 2D</button>
+    <span class="hint">Ctrl/Cmd + Enter también calcula (usando la última sección visible).</span>
+  </div>
+  <div class="banner-err" id="errBanner2D"></div>
+  <div id="qualityProgress2D" style="display:none;margin:10px 0 0;">
+    <div style="height:6px;background:var(--grid);border-radius:4px;overflow:hidden;"><div id="qualityBar2D" style="height:100%;width:0;background:var(--accent);"></div></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+      <span class="hint" id="qualityText2D" style="margin:0;"></span>
+      <button type="button" class="btn" id="qualityStopBtn2D">Detener</button>
     </div>
   </div>
-  <div class="version-warn" id="versionWarn">Esta ventana tiene una versión distinta del panel. Recárgala con Ctrl + F5.</div>
-  <div id="startScreen">
-    <img id="startImg" alt="">
-    <div class="start-title" id="startTitle"><div class="main">100 IDIS DIJERON</div></div>
-  </div>
-  <button class="sound-hint" id="soundHint">🔊 Haz clic aquí para activar el sonido</button>
-  <div class="strikes-display" id="strikesDisplay"></div>
-</div>
+
+  <!-- SECTION 6: resultados 2D -->
+  <section id="results2D">
+    <div class="section-head">
+      <h2>Resultado: plano de corte 2D</h2>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid2D"></div>
+    <div id="costSlot2D"></div>
+
+    <div id="sheetsContainer"></div>
+
+    <span class="cutlist-toggle" id="cutlistToggle2D">▸ Ver lista de corte en formato tabla (para imprimir)</span>
+    <table class="cutlist" id="cutlistTable2D">
+      <thead>
+        <tr><th>Plancha #</th><th>Pieza</th><th>Ancho</th><th>Alto</th><th>Posición X</th><th>Posición Y</th><th>Rotada</th></tr>
+      </thead>
+      <tbody id="cutlistBody2D"></tbody>
+    </table>
+  </section>
+
+  </div><!-- /#section2D -->
+
+</div><!-- /.sheet -->
+
+<footer>
+  CALCULADORA DE CORTES · Herramienta de uso general para optimización de corte 1D y 2D (cutting stock problem)
+</footer>
 
 <script>
 (function(){
-  "use strict";
+  const COLORS = ['#2C5F8A','#3D434B','#3B7A57','#8A5FB0','#B0862C','#4A8FA8','#A85236','#5F7A3B','#7A5F8A','#3B8A7A'];
+  const UNIT_TO_MM = { mm:1, cm:10, m:1000, in:25.4, ft:304.8 };
+  let pieceRows = []; // {id, label, length, qty}
+  let nextId = 1;
+  let stockRows = []; // {id, length, price}
+  let nextStockId = 1;
 
-  var STORAGE_KEY = "cien_mx_dijeron_state_v1";
-  var IMG_KEY = "cien_mx_dijeron_start_img_v1";
-  var APP_VERSION = "2026-11-06-c";
-  var CHANNEL_NAME = "cien-mx-dijeron-sync";
-  var bc = null;
-  try { bc = new BroadcastChannel(CHANNEL_NAME); } catch(e) { bc = null; }
+  const piecesBody = document.getElementById('piecesBody');
+  const unitSelect = document.getElementById('unit');
+  const toleranceUnitSelect = document.getElementById('toleranceUnit');
+  const multiLengthToggle = document.getElementById('multiLengthToggle');
+  const stockOptsBody = document.getElementById('stockOptsBody');
+  const stockUnitLabel = document.getElementById('stockUnitLabel');
 
-  var isDisplay = location.hash.indexOf("display") !== -1;
-  document.body.classList.add(isDisplay ? "mode-display" : "mode-control");
-
-  // ---------- default state ----------
-  function defaultState(){
-    return {
-      teams: [
-        { name: "Equipo 1", score: 0 },
-        { name: "Equipo 2", score: 0 }
-      ],
-      rounds: [
-        {
-          id: cryptoId(),
-          question: "Menciona algo que no puede faltar en la mochila de un IDI",
-          answers: [
-            { text: "Laptop", points: 30, revealed: false },
-            { text: "Escuadras / escalímetro", points: 22, revealed: false },
-            { text: "Cutter", points: 18, revealed: false },
-            { text: "Flexómetro", points: 12, revealed: false },
-            { text: "Lápices y plumones", points: 10, revealed: false },
-            { text: "Café", points: 8, revealed: false }
-          ],
-          strikes: 0
-        }
-      ],
-      liveRoundId: null,
-      flashSeq: 0,
-      showStart: true,
-      revealSeq: 0
-    };
+  function convert(value, fromUnit, toUnit){
+    return value * UNIT_TO_MM[fromUnit] / UNIT_TO_MM[toUnit];
   }
 
-  function cryptoId(){
-    return "r" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+  function colorFor(label){
+    // stable color per unique label, in order of first appearance
+    const labels = [...new Set(pieceRows.map(p=>p.label || ''))];
+    const idx = labels.indexOf(label || '');
+    return COLORS[idx % COLORS.length] || '#888';
   }
 
-  // ---------- state load/save ----------
-  var state = loadState();
-
-  function loadState(){
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(raw) return JSON.parse(raw);
-    }catch(e){}
-    return defaultState();
+  function addPiece(label, length, qty){
+    pieceRows.push({id: nextId++, label: label || ('Pieza ' + pieceRows.length), length: length ?? '', qty: qty ?? 1});
+    renderPieces();
   }
 
-  function loadImage(){
-    try{ return localStorage.getItem(IMG_KEY) || ""; }catch(e){ return ""; }
-  }
-  function saveImage(d){
-    try{
-      if(d) localStorage.setItem(IMG_KEY, d); else localStorage.removeItem(IMG_KEY);
-      return true;
-    }catch(e){ return false; }
-  }
-  var startImage = loadImage();
-  function startVisible(){ return state.showStart !== false; }
-
-  function persist(){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  function removePiece(id){
+    pieceRows = pieceRows.filter(p => p.id !== id);
+    if(pieceRows.length === 0) addPiece('Pieza 1','',1);
+    else renderPieces();
   }
 
-  function broadcast(extra){
-    var msg = Object.assign({ type:"state", state: state, v: APP_VERSION }, extra || {});
-    if(bc){ try{ bc.postMessage(msg); }catch(e){} }
+  function renderPieces(){
+    piecesBody.innerHTML = '';
+    pieceRows.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = p.id;
+      tr.innerHTML = `
+        <td class="col-color"><span class="swatch" style="background:${colorFor(p.label)}"></span></td>
+        <td><input type="text" class="in-label" value="${escapeHtml(p.label)}" placeholder="Ej. Pata corta"></td>
+        <td class="col-len"><input type="number" class="in-len" min="0" step="any" value="${p.length}"></td>
+        <td class="col-qty"><input type="number" class="in-qty" min="1" step="1" value="${p.qty}"></td>
+        <td class="col-del"><button class="btn-del" title="Eliminar pieza">✕</button></td>
+      `;
+      tr.querySelector('.in-label').addEventListener('input', e => { p.label = e.target.value; updateSwatches(); });
+      tr.querySelector('.in-len').addEventListener('input', e => { p.length = parseFloat(e.target.value); });
+      tr.querySelector('.in-qty').addEventListener('input', e => { p.qty = parseInt(e.target.value,10); });
+      tr.querySelector('.btn-del').addEventListener('click', () => removePiece(p.id));
+      piecesBody.appendChild(tr);
+    });
   }
 
-  function commit(extra){
-    persist();
-    broadcast(extra);
-    if(!isDisplay) renderControl();
-    if(isDisplay) renderDisplay();
+  function updateSwatches(){
+    [...piecesBody.querySelectorAll('tr')].forEach(tr => {
+      const id = parseInt(tr.dataset.id,10);
+      const p = pieceRows.find(x=>x.id===id);
+      tr.querySelector('.swatch').style.background = colorFor(p.label);
+    });
   }
 
-  if(bc){
-    bc.onmessage = function(ev){
-      var msg = ev.data;
-      if(!msg) return;
-      if(msg.type === "startImage"){
-        startImage = msg.image || "";
-        if(isDisplay){ renderDisplay(); }
-        else if(window.renderStartBlock){ window.renderStartBlock(); }
-        return;
-      }
-      if(msg.type === "state"){
-        if(isDisplay){
-          var vw = document.getElementById("versionWarn");
-          if(vw) vw.style.display = (msg.v && msg.v !== APP_VERSION) ? "block" : "none";
-        }
-        state = msg.state;
-        if(isDisplay){
-          renderDisplay();
-          if(msg.strikeFlash){ triggerStrikeFlash(msg.strikeCount); }
-          if(msg.reveal){ playDing(); }
-        } else {
-          renderControl();
-        }
-      }
-    };
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // also poll localStorage on display side in case BroadcastChannel unsupported (older webviews)
-  window.addEventListener("storage", function(ev){
-    if(ev.key === IMG_KEY){
-      startImage = ev.newValue || "";
-      if(isDisplay){ renderDisplay(); }
-      else if(window.renderStartBlock){ window.renderStartBlock(); }
-      return;
-    }
-    if(ev.key === STORAGE_KEY && ev.newValue){
-      try{
-        state = JSON.parse(ev.newValue);
-        if(isDisplay) renderDisplay(); else renderControl();
-      }catch(e){}
-    }
+  document.getElementById('addPieceBtn').addEventListener('click', () => addPiece('Pieza ' + (pieceRows.length+1), '', 1));
+
+  unitSelect.addEventListener('change', () => {
+    stockUnitLabel.textContent = unitSelect.value;
   });
 
-  // ---------- helpers ----------
-  function getLiveRound(){
-    if(!state.liveRoundId) return null;
-    for(var i=0;i<state.rounds.length;i++){
-      if(state.rounds[i].id === state.liveRoundId) return state.rounds[i];
-    }
-    return null;
+  // ---- Multiple stock lengths with price ----
+  function addStockRow(length, price){
+    stockRows.push({ id: nextStockId++, length: length ?? '', price: price ?? '' });
+    renderStockOptions();
   }
 
-  function potForRound(round){
-    if(!round) return 0;
-    var t = 0;
-    round.answers.forEach(function(a){ if(a.revealed) t += Number(a.points)||0; });
-    return t;
+  function removeStockRow(id){
+    stockRows = stockRows.filter(s => s.id !== id);
+    if(stockRows.length === 0) addStockRow('', '');
+    else renderStockOptions();
   }
 
-  // ---------- sound ----------
-  var audioCtx = null;
-  function getCtx(){
-    if(!audioCtx){
-      try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ audioCtx = null; }
-    }
-    return audioCtx;
+  function renderStockOptions(){
+    stockOptsBody.innerHTML = '';
+    stockRows.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = s.id;
+      tr.innerHTML = `
+        <td><input type="number" class="in-stocklen" min="0" step="any" value="${s.length}"></td>
+        <td><input type="number" class="in-stockprice" min="0" step="any" value="${s.price}"></td>
+        <td class="col-del"><button class="btn-del" title="Eliminar longitud">✕</button></td>
+      `;
+      tr.querySelector('.in-stocklen').addEventListener('input', e => { s.length = parseFloat(e.target.value); });
+      tr.querySelector('.in-stockprice').addEventListener('input', e => { s.price = parseFloat(e.target.value); });
+      tr.querySelector('.btn-del').addEventListener('click', () => removeStockRow(s.id));
+      stockOptsBody.appendChild(tr);
+    });
   }
-  function playTone(freq, dur, type, gainVal){
-    var ctx = getCtx();
-    if(!ctx || ctx.state === "suspended") return;
+
+  document.getElementById('addStockBtn').addEventListener('click', () => addStockRow('', ''));
+
+  // ---------- Pestañas "única / varias": la pestaña abierta es la que se usa ----------
+  // La casilla oculta (multiLengthToggle / multiPanelToggle) solo guarda el modo
+  // para que el resto del código lo lea igual que antes.
+  function setupModeTabs(cfg){
+    let mode = 'single', openSingle = true, openMulti = false;
+    const el = id => document.getElementById(id);
+    const stateBox = el(cfg.stateCheckbox);
+    const singleBtn = el(cfg.singleBtn), multiBtn = el(cfg.multiBtn);
+    const singleBody = el(cfg.singleBody), multiBody = el(cfg.multiBody);
+    const tolBlock = el(cfg.tolBlock);
+    const tolSingle = el(cfg.tolSlotSingle), tolMulti = el(cfg.tolSlotMulti);
+    const unitSlotMulti = el(cfg.unitSlotMulti);
+    const unitWraps = cfg.unitWraps.map(el);
+    const restore = cfg.unitRestore.map(([anchor, unit]) => [el(anchor), el(unit)]);
+
+    function setLabel(btn, text, open, active){
+      btn.textContent = (open ? '▾ ' : '▸ ') + text;
+      if(active){
+        const badge = document.createElement('span');
+        badge.className = 'mode-badge';
+        badge.textContent = 'en uso';
+        btn.appendChild(badge);
+      }
+    }
+    function render(){
+      stateBox.checked = (mode === 'multi');
+      singleBody.style.display = openSingle ? '' : 'none';
+      multiBody.style.display = openMulti ? '' : 'none';
+      setLabel(singleBtn, cfg.singleText, openSingle, mode === 'single');
+      setLabel(multiBtn, cfg.multiText, openMulti, mode === 'multi');
+      if(mode === 'multi'){
+        unitWraps.forEach(w => unitSlotMulti.appendChild(w));
+        tolMulti.appendChild(tolBlock);
+      } else {
+        restore.forEach(([anchor, unit]) => anchor.after(unit));
+        tolSingle.appendChild(tolBlock);
+      }
+    }
+    singleBtn.addEventListener('click', () => {
+      if(mode === 'single'){ openSingle = !openSingle; }
+      else { mode = 'single'; openSingle = true; openMulti = false; }
+      render();
+    });
+    multiBtn.addEventListener('click', () => {
+      if(mode === 'multi'){ openMulti = !openMulti; }
+      else { mode = 'multi'; openMulti = true; openSingle = false; }
+      render();
+    });
+    render();
+  }
+
+  setupModeTabs({
+    stateCheckbox:'multiLengthToggle', singleBtn:'singleLengthToggleBtn', multiBtn:'multiLengthArrowBtn',
+    singleBody:'singleLengthBody', multiBody:'multiLengthBody', tolBlock:'tolBlockLinear',
+    tolSlotSingle:'tolSlotSingleLinear', tolSlotMulti:'tolSlotMultiLinear', unitSlotMulti:'unitsRelocateTarget',
+    unitWraps:['unitFieldWrap'], unitRestore:[['stockLengthFieldWrap','unitFieldWrap']],
+    singleText:'Longitud única', multiText:'Varias longitudes de material'
+  });
+
+  // seed with example stock lengths
+  addStockRow(96, 45);
+  addStockRow(48, 25);
+  stockUnitLabel.textContent = unitSelect.value;
+
+  // seed with example rows
+  addPiece('Pieza A', 24, 4);
+  addPiece('Pieza B', 18, 6);
+  addPiece('Pieza C', 10, 10);
+
+  // ---------- ALGORITHM: Best-Fit Decreasing bin packing (1D cutting stock) ----------
+  // stockOptions: [{length, price}] — one or more available material lengths, each with its price.
+  function packWithStrategy(stockOptions, items, chooseFn, tolerance){
+    let bins = [];
+    items.forEach(item => {
+      let best = null;
+      let bestRemaining = Infinity;
+      for(const bin of bins){
+        // Solo se cobra la tolerancia (kerf) si ya hay una pieza antes en la barra:
+        // el corte que separa esta pieza de la anterior sí gasta material,
+        // pero la última pieza de la barra no necesita un corte extra reservado
+        // de antemano — el sobrante que quede después de ella es simplemente desperdicio.
+        const needed = item.length + (bin.items.length > 0 ? tolerance : 0);
+        if(bin.remaining >= needed - 1e-9 && bin.remaining < bestRemaining){
+          best = bin;
+          bestRemaining = bin.remaining;
+        }
+      }
+      if(best){
+        const needed = item.length + (best.items.length > 0 ? tolerance : 0);
+        best.items.push(item);
+        best.remaining -= needed;
+      } else {
+        const candidates = stockOptions.filter(s => s.length >= item.length - 1e-9);
+        const chosen = chooseFn(candidates);
+        bins.push({ stockLength: chosen.length, price: chosen.price, remaining: chosen.length - item.length, items: [item] });
+      }
+    });
+    return bins;
+  }
+
+  function binsTotalCost(bins){
+    return bins.reduce((s,b) => s + (parseFloat(b.price) || 0), 0);
+  }
+
+  // ----- Mejora posterior: elegir la mezcla de longitudes -----
+  // El empaquetado inicial decide la longitud de cada barra en el momento de abrirla,
+  // sin saber qué piezas faltan por llegar. Estos pasos corrigen eso después.
+
+  // Largo que realmente ocupan las piezas de una barra (tolerancia solo entre piezas).
+  function usedLength(items, tolerance){
+    return items.reduce((s,it) => s + it.length, 0) + Math.max(0, items.length - 1) * tolerance;
+  }
+
+  // Puntuación de un conjunto de barras: [costo, material] o [material, costo] según la prioridad.
+  function scoreBins(bins, priority){
+    const cost = binsTotalCost(bins);
+    const material = bins.reduce((s,b) => s + b.stockLength, 0);
+    return priority === 'material' ? [material, cost] : [cost, material];
+  }
+  function cmpScore(a, b){
+    for(let i = 0; i < a.length; i++){
+      if(a[i] < b[i] - 1e-6) return -1;
+      if(a[i] > b[i] + 1e-6) return 1;
+    }
+    return 0;
+  }
+
+  // La opción de material más conveniente (según la prioridad) a la que le caben las piezas.
+  function pickOption(used, stockOptions, priority){
+    let best = null;
+    stockOptions.forEach(s => {
+      if(s.length < used - 1e-9) return;
+      if(!best) { best = s; return; }
+      const sa = priority === 'material' ? [s.length, s.price] : [s.price, s.length];
+      const sb = priority === 'material' ? [best.length, best.price] : [best.price, best.length];
+      if(cmpScore(sa, sb) < 0) best = s;
+    });
+    return best;
+  }
+
+  function makeBin(items, option, tolerance){
+    return { stockLength: option.length, price: option.price, remaining: option.length - usedLength(items, tolerance), items };
+  }
+
+  // Paso 1: cada barra pasa a la longitud más conveniente a la que todavía le caben sus piezas.
+  function rightSizeBins(bins, stockOptions, tolerance, priority){
+    return bins.map(b => {
+      const opt = pickOption(usedLength(b.items, tolerance), stockOptions, priority);
+      return opt ? makeBin(b.items, opt, tolerance) : b;
+    });
+  }
+
+  // Paso 2: para cada par de barras, probar si sus piezas juntas caben en una sola barra,
+  // o si repartidas de otra forma entre dos barras (de cualquier longitud) salen mejor.
+  function improveBins(bins, stockOptions, tolerance, priority){
+    let improved = true, guard = 0;
+    while(improved && guard++ < 60){
+      improved = false;
+      for(let i = 0; i < bins.length && !improved; i++){
+        for(let j = i + 1; j < bins.length && !improved; j++){
+          const all = bins[i].items.concat(bins[j].items).sort((a,b) => b.length - a.length);
+          let bestScore = scoreBins([bins[i], bins[j]], priority);
+          let bestRes = null;
+
+          const optAll = pickOption(usedLength(all, tolerance), stockOptions, priority);
+          if(optAll){
+            const cand = [makeBin(all, optAll, tolerance)];
+            const sc = scoreBins(cand, priority);
+            if(cmpScore(sc, bestScore) < 0){ bestScore = sc; bestRes = cand; }
+          }
+
+          const n = all.length;
+          if(n <= 14){
+            for(let mask = 1; mask < (1 << (n - 1)); mask++){
+              const left = [], right = [];
+              for(let k = 0; k < n; k++){ ((mask >> k) & 1 ? left : right).push(all[k]); }
+              const oL = pickOption(usedLength(left, tolerance), stockOptions, priority);
+              const oR = pickOption(usedLength(right, tolerance), stockOptions, priority);
+              if(!oL || !oR) continue;
+              const cand = [makeBin(left, oL, tolerance), makeBin(right, oR, tolerance)];
+              const sc = scoreBins(cand, priority);
+              if(cmpScore(sc, bestScore) < 0){ bestScore = sc; bestRes = cand; }
+            }
+          }
+
+          if(bestRes){
+            bins.splice(j, 1);
+            bins[i] = bestRes[0];
+            if(bestRes[1]) bins.splice(i + 1, 0, bestRes[1]);
+            improved = true;
+          }
+        }
+      }
+    }
+    return bins;
+  }
+
+  function optimizeCuts(stockOptions, tolerance, pieces, priority){
+    // Expand into individual items
+    let items = [];
+    pieces.forEach(p => {
+      const len = parseFloat(p.length);
+      const qty = parseInt(p.qty, 10);
+      if(!len || len <= 0 || !qty || qty <= 0) return;
+      for(let i=0;i<qty;i++){
+        items.push({ label: p.label || 'Sin nombre', length: len, color: colorFor(p.label) });
+      }
+    });
+
+    if(items.length === 0){
+      throw {type:'empty', message:'Agrega al menos una pieza con longitud y cantidad válidas.'};
+    }
+
+    const maxStock = Math.max(...stockOptions.map(s => s.length));
+    const oversized = items.filter(it => it.length > maxStock + 1e-9);
+    if(oversized.length){
+      const names = [...new Set(oversized.map(o=>o.label))].join(', ');
+      throw {type:'oversized', message:`Estas piezas no caben ni en la longitud de material más larga disponible (${maxStock}): ${names}.`};
+    }
+
+    // Sort descending by length (Decreasing)
+    items.sort((a,b) => b.length - a.length);
+
+    // Varias reglas para elegir qué longitud abrir cuando ninguna barra abierta alcanza.
+    const strategies = [
+      candidates => candidates.reduce((a,b) => ((b.price/b.length) < (a.price/a.length) ? b : a)), // más barata por unidad de largo
+      candidates => candidates.reduce((a,b) => (b.length < a.length ? b : a)), // la más corta que alcance
+      candidates => candidates.reduce((a,b) => (b.price < a.price ? b : a)), // la más barata en precio absoluto
+      candidates => candidates.reduce((a,b) => (b.length > a.length ? b : a)), // la más larga
+    ];
+
+    let bestBins = null, bestScore = null;
+    strategies.forEach(fn => {
+      let bins = packWithStrategy(stockOptions, items, fn, tolerance);
+      bins = rightSizeBins(bins, stockOptions, tolerance, priority);
+      bins = improveBins(bins, stockOptions, tolerance, priority);
+      const sc = scoreBins(bins, priority);
+      if(!bestBins || cmpScore(sc, bestScore) < 0){
+        bestBins = bins;
+        bestScore = sc;
+      }
+    });
+
+    return bestBins;
+  }
+
+  // ---------- RENDERING ----------
+  const resultsSection = document.getElementById('results');
+  const summaryGrid = document.getElementById('summaryGrid');
+  const tubesContainer = document.getElementById('tubesContainer');
+  const errBanner = document.getElementById('errBanner');
+  const costSlot = document.getElementById('costSlot');
+  const cutlistBody = document.getElementById('cutlistBody');
+
+  function fmt(n){
+    return (Math.round(n * 100)/100).toString();
+  }
+
+  function buildTubeSVG(bin, unit, tolerance){
+    const stockLength = bin.stockLength;
+    const W = 1000, H = 78;
+    const padX = 4, barY = 14, barH = 34;
+    const usableW = W - padX*2;
+    let x = padX;
+    let segs = '';
+    let dims = '';
+    bin.items.forEach((item, idx) => {
+      const isLast = idx === bin.items.length - 1;
+      const w = (item.length / stockLength) * usableW;
+      const effectiveLen = isLast ? item.length : item.length + tolerance;
+      const wTol = (effectiveLen / stockLength) * usableW;
+      segs += `<rect x="${x}" y="${barY}" width="${w}" height="${barH}" fill="${item.color}" stroke="#2B2E33" stroke-width="0.6"/>`;
+      if(w > 34){
+        segs += `<text x="${x + w/2}" y="${barY + barH/2 + 4}" font-family="IBM Plex Mono, monospace" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">${fmt(item.length)}</text>`;
+      }
+      // tolerance sliver (solo si hay otra pieza después en la misma barra)
+      if(wTol - w > 0.4){
+        segs += `<rect x="${x+w}" y="${barY}" width="${wTol-w}" height="${barH}" fill="#2B2E33" opacity="0.35"/>`;
+      }
+      // dimension tick
+      dims += `<line x1="${x}" y1="${barY+barH+4}" x2="${x}" y2="${barY+barH+10}" stroke="#9AA7AF" stroke-width="1"/>`;
+      x += wTol;
+    });
+    // waste segment
+    const remainW = (bin.remaining / stockLength) * usableW;
+    if(remainW > 0.5){
+      segs += `<rect x="${x}" y="${barY}" width="${remainW}" height="${barH}" fill="url(#hatch)" stroke="#9AA7AF" stroke-width="0.6"/>`;
+    }
+    dims += `<line x1="${padX}" y1="${barY+barH+4}" x2="${padX}" y2="${barY+barH+10}" stroke="#2B2E33" stroke-width="1.2"/>`;
+    dims += `<line x1="${W-padX}" y1="${barY+barH+4}" x2="${W-padX}" y2="${barY+barH+10}" stroke="#2B2E33" stroke-width="1.2"/>`;
+    dims += `<line x1="${padX}" y1="${barY+barH+8}" x2="${W-padX}" y2="${barY+barH+8}" stroke="#2B2E33" stroke-width="1"/>`;
+    dims += `<text x="${W/2}" y="${barY+barH+22}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#5A6B75" text-anchor="middle">${fmt(stockLength)} ${unit}</text>`;
+
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <rect width="7" height="7" fill="#EFF0F2"/>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#C4C8CD" stroke-width="3"/>
+        </pattern>
+      </defs>
+      <rect x="${padX}" y="${barY}" width="${usableW}" height="${barH}" fill="none" stroke="#2B2E33" stroke-width="1.2"/>
+      ${segs}
+      ${dims}
+    </svg>`;
+  }
+
+  function render(bins, unit, showCost, tolerance){
+    const currency = '$';
+    errBanner.style.display = 'none';
+    const oldBreakdown = document.getElementById('costBreakdownWrap');
+    if(oldBreakdown) oldBreakdown.remove();
+
+    // summary
+    const totalPieces = bins.reduce((s,b)=>s+b.items.length,0);
+    const totalUsedMaterial = bins.reduce((s,b)=>s+b.stockLength,0);
+    const totalWaste = bins.reduce((s,b)=>s+b.remaining,0);
+    const efficiency = 100 * (1 - totalWaste/totalUsedMaterial);
+    const totalCost = binsTotalCost(bins);
+
+    let cards = `
+      <div class="summary-card accent">
+        <div class="label">Barras necesarias</div>
+        <div class="value">${bins.length}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Piezas cortadas</div>
+        <div class="value">${totalPieces}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Desperdicio total</div>
+        <div class="value">${fmt(totalWaste)} <span class="unit">${unit}</span></div>
+      </div>
+      <div class="summary-card ok">
+        <div class="label">Eficiencia de uso</div>
+        <div class="value">${fmt(efficiency)}<span class="unit">%</span></div>
+      </div>`;
+    if(showCost){
+      cards += `
+      <div class="summary-card accent">
+        <div class="label">Costo total</div>
+        <div class="value">${currency}${fmt(totalCost)}</div>
+      </div>`;
+    }
+    summaryGrid.innerHTML = cards;
+
+    // cost breakdown table
+    if(showCost){
+      const groups = {};
+      bins.forEach(b => {
+        const key = b.stockLength + '|' + b.price;
+        if(!groups[key]) groups[key] = { length: b.stockLength, price: b.price, count: 0 };
+        groups[key].count++;
+      });
+      const rows = Object.values(groups).sort((a,b)=>b.length-a.length).map(g => `
+        <tr><td>${fmt(g.length)} ${unit}</td><td>${g.count}</td><td>${currency}${fmt(g.price)}</td><td>${currency}${fmt(g.count*g.price)}</td></tr>
+      `).join('');
+      const breakdownHtml = `
+        <table class="costBreakdown">
+          <thead><tr><th>Longitud usada</th><th>Cantidad</th><th>Precio c/u</th><th>Subtotal</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="3">Total</td><td>${currency}${fmt(totalCost)}</td></tr></tfoot>
+        </table>`;
+      costSlot.insertAdjacentHTML('afterend', `<div id="costBreakdownWrap">${breakdownHtml}</div>`);
+    }
+
+    // tubes
+    tubesContainer.innerHTML = '';
+    cutlistBody.innerHTML = '';
+    bins.forEach((bin, i) => {
+      const used = bin.stockLength - bin.remaining;
+      const wastePct = 100 * bin.remaining / bin.stockLength;
+      const div = document.createElement('div');
+      div.className = 'tube-block';
+      div.innerHTML = `
+        <div class="tube-head">
+          <span class="tube-id">BARRA ${i+1} / ${bins.length} — ${fmt(bin.stockLength)} ${unit}${showCost ? ' · ' + currency + fmt(bin.price) : ''}</span>
+          <span class="tube-meta">usado ${fmt(used)} ${unit} · desperdicio ${fmt(bin.remaining)} ${unit} (${fmt(wastePct)}%)</span>
+        </div>
+        <div class="tube-svg-wrap">${buildTubeSVG(bin, unit, tolerance)}</div>
+      `;
+      tubesContainer.appendChild(div);
+
+      let cum = 0;
+      bin.items.forEach((item, idx) => {
+        if(idx > 0) cum += tolerance;
+        cum += item.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td><span class="swatch" style="background:${item.color}"></span>${escapeHtml(item.label)}</td><td>${fmt(item.length)} ${unit}</td><td>${fmt(cum)} ${unit}</td>`;
+        cutlistBody.appendChild(tr);
+      });
+    });
+
+    // legend (unique labels)
+    const uniqueLabels = [...new Map(bins.flatMap(b=>b.items).map(it=>[it.label,it])).values()];
+    const legendHtml = `<div class="legend">` + uniqueLabels.map(it => `<span class="legend-item"><span class="swatch" style="background:${it.color}"></span>${escapeHtml(it.label)}</span>`).join('') +
+      `<span class="legend-item"><span class="swatch" style="background:#C4C8CD;background-image:repeating-linear-gradient(45deg,#C4C8CD,#C4C8CD 2px,#EFF0F2 2px,#EFF0F2 4px)"></span>Desperdicio</span></div>`;
+    tubesContainer.insertAdjacentHTML('beforeend', legendHtml);
+
+    resultsSection.style.display = 'block';
+  }
+
+  function calculate(){
+    document.querySelectorAll('#piecesBody tr').forEach(tr => tr.classList.remove('row-err'));
+    errBanner.style.display = 'none';
+
+    const toleranceRaw = parseFloat(document.getElementById('tolerance').value) || 0;
+    const unit = unitSelect.value;
+    const toleranceUnit = toleranceUnitSelect.value;
+    const tolerance = convert(toleranceRaw, toleranceUnit, unit);
+    const singleStockPrice = parseFloat(document.getElementById('stockPrice').value) || 0;
+    const showCost = multiLengthToggle.checked || singleStockPrice > 0;
+
+    let stockOptions = [];
+    if(multiLengthToggle.checked){
+      stockOptions = stockRows
+        .filter(s => parseFloat(s.length) > 0)
+        .map(s => ({ length: parseFloat(s.length), price: parseFloat(s.price) || 0 }));
+      if(stockOptions.length === 0){
+        errBanner.style.display = 'block';
+        errBanner.textContent = 'Agrega al menos una longitud de material válida (mayor a 0) en la tabla de longitudes.';
+        return;
+      }
+    } else {
+      const stockLength = parseFloat(document.getElementById('stockLength').value);
+      if(!stockLength || stockLength <= 0){
+        errBanner.style.display = 'block';
+        errBanner.textContent = 'Ingresa una longitud de material válida (mayor a 0).';
+        return;
+      }
+      stockOptions = [{ length: stockLength, price: singleStockPrice }];
+    }
+
+    const validPieces = pieceRows.filter(p => parseFloat(p.length) > 0 && parseInt(p.qty,10) > 0);
+    if(validPieces.length === 0){
+      errBanner.style.display = 'block';
+      errBanner.textContent = 'Agrega al menos una pieza con longitud y cantidad mayores a 0.';
+      return;
+    }
+
     try{
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.type = type || "sine";
-      osc.frequency.value = freq;
-      gain.gain.value = gainVal || 0.08;
-      osc.connect(gain); gain.connect(ctx.destination);
-      var now = ctx.currentTime;
-      gain.gain.setValueAtTime(gainVal||0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-      osc.start(now);
-      osc.stop(now + dur);
-    }catch(e){}
-  }
-  function playDing(){ playTone(880, 0.28, "sine", 0.09); }
-  function playBuzz(){
-    playTone(140, 0.5, "sawtooth", 0.11);
-    setTimeout(function(){ playTone(110, 0.4, "sawtooth", 0.09); }, 90);
+      const priorityLinear = document.querySelector('input[name="priorityLinear"]:checked').value;
+      const bins = optimizeCuts(stockOptions, tolerance, validPieces, priorityLinear);
+      render(bins, unit, showCost, tolerance);
+    } catch(e){
+      errBanner.style.display = 'block';
+      errBanner.textContent = e.message || 'No fue posible calcular la distribución.';
+      resultsSection.style.display = 'none';
+    }
   }
 
-  function triggerStrikeFlash(count){
-    var el = document.getElementById("strikesDisplay");
-    if(!el) return;
-    var n = Math.max(1, Math.min(3, Number(count)||1));
-    var size = n===1 ? "min(38vw,62vh)" : (n===2 ? "min(30vw,52vh)" : "min(24vw,46vh)");
-    var h = "";
-    for(var i=0;i<n;i++){ h += '<div class="big-x" style="font-size:' + size + '">X</div>'; }
-    el.innerHTML = h;
-    el.classList.remove("flash");
-    void el.offsetWidth;
-    el.classList.add("flash");
-    for(var k=0;k<n;k++){ setTimeout(playBuzz, k*380); }
+  document.getElementById('calcBtn').addEventListener('click', calculate);
+
+  document.getElementById('cutlistToggle').addEventListener('click', function(){
+    const cutlistTableEl = document.getElementById('cutlistTable');
+    const isHidden = cutlistTableEl.style.display !== 'table';
+    cutlistTableEl.style.display = isHidden ? 'table' : 'none';
+    this.textContent = (isHidden ? '▾' : '▸') + ' Ver lista de corte en formato tabla (para imprimir)';
+  });
+
+  // ============================================================
+  // SECCIÓN 2D — corte de superficies rectangulares (nesting)
+  // ============================================================
+
+  let pieceRows2D = []; // {id, label, width, height, qty}
+  let nextId2D = 1;
+  let panelRows = []; // {id, width, height, price}
+  let nextPanelId = 1;
+
+  const pieces2DBody = document.getElementById('pieces2DBody');
+  const unit2DSelect = document.getElementById('unit2D');
+  const toleranceUnit2DSelect = document.getElementById('toleranceUnit2D');
+  const grainToggle = document.getElementById('grainToggle');
+  const multiPanelToggle = document.getElementById('multiPanelToggle');
+  const panelOptsBody = document.getElementById('panelOptsBody');
+  const panelUnitLabel = document.getElementById('panelUnitLabel');
+  const resultsSection2D = document.getElementById('results2D');
+  const summaryGrid2D = document.getElementById('summaryGrid2D');
+  const costSlot2D = document.getElementById('costSlot2D');
+  const sheetsContainer = document.getElementById('sheetsContainer');
+  const errBanner2D = document.getElementById('errBanner2D');
+  const cutlistBody2D = document.getElementById('cutlistBody2D');
+
+  function syncUnitLabel2D(){
+    panelUnitLabel.textContent = unit2DSelect.value;
+  }
+  syncUnitLabel2D();
+  unit2DSelect.addEventListener('change', syncUnitLabel2D);
+
+  function colorFor2D(label){
+    const labels = [...new Set(pieceRows2D.map(p => p.label || ''))];
+    const idx = labels.indexOf(label || '');
+    return COLORS[idx % COLORS.length] || '#888';
   }
 
-  // ==================================================================
-  // CONTROL VIEW RENDER + ACTIONS
-  // ==================================================================
-  if(!isDisplay){
+  function addPiece2D(label, width, height, qty){
+    pieceRows2D.push({ id: nextId2D++, label: label || ('Pieza ' + pieceRows2D.length), width: width ?? '', height: height ?? '', qty: qty ?? 1 });
+    renderPieces2D();
+  }
+  function removePiece2D(id){
+    pieceRows2D = pieceRows2D.filter(p => p.id !== id);
+    if(pieceRows2D.length === 0) addPiece2D('Pieza 1', '', '', 1);
+    else renderPieces2D();
+  }
+  function renderPieces2D(){
+    pieces2DBody.innerHTML = '';
+    pieceRows2D.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = p.id;
+      tr.innerHTML = `
+        <td class="col-color"><span class="swatch" style="background:${colorFor2D(p.label)}"></span></td>
+        <td><input type="text" class="in-label" value="${escapeHtml(p.label)}" placeholder="Ej. Costado"></td>
+        <td class="col-len"><input type="number" class="in-w" min="0" step="any" value="${p.width}"></td>
+        <td class="col-len"><input type="number" class="in-h" min="0" step="any" value="${p.height}"></td>
+        <td class="col-qty"><input type="number" class="in-qty" min="1" step="1" value="${p.qty}"></td>
+        <td class="col-del"><button class="btn-del" title="Eliminar pieza">✕</button></td>
+      `;
+      tr.querySelector('.in-label').addEventListener('input', e => { p.label = e.target.value; updateSwatches2D(); });
+      tr.querySelector('.in-w').addEventListener('input', e => { p.width = parseFloat(e.target.value); });
+      tr.querySelector('.in-h').addEventListener('input', e => { p.height = parseFloat(e.target.value); });
+      tr.querySelector('.in-qty').addEventListener('input', e => { p.qty = parseInt(e.target.value, 10); });
+      tr.querySelector('.btn-del').addEventListener('click', () => removePiece2D(p.id));
+      pieces2DBody.appendChild(tr);
+    });
+  }
+  function updateSwatches2D(){
+    [...pieces2DBody.querySelectorAll('tr')].forEach(tr => {
+      const id = parseInt(tr.dataset.id, 10);
+      const p = pieceRows2D.find(x => x.id === id);
+      tr.querySelector('.swatch').style.background = colorFor2D(p.label);
+    });
+  }
+  document.getElementById('addPiece2DBtn').addEventListener('click', () => addPiece2D('Pieza ' + (pieceRows2D.length + 1), '', '', 1));
 
-    (function setupDisplayLink(){
-      var url = location.href.split("#")[0] + "#display";
-      var openBtn = document.getElementById("openDisplayBtn");
-      var hint = document.getElementById("popupUrlHint");
-      openBtn.setAttribute("href", url);
-      hint.textContent = "Si el botón no abre nada (algunos navegadores bloquean la ventana), copia este enlace y pégalo tú mismo en una pestaña o ventana nueva: " + url;
-      document.getElementById("copyDisplayUrlBtn").addEventListener("click", function(){
-        var btn = this;
-        function done(msg){ var old = btn.textContent; btn.textContent = msg; setTimeout(function(){ btn.textContent = old; }, 1500); }
-        if(navigator.clipboard && navigator.clipboard.writeText){
-          navigator.clipboard.writeText(url).then(function(){ done("¡Copiado!"); }, function(){ done("No se pudo copiar"); });
-        } else {
-          done("Copia manual: " + url);
+  function addPanelOption(width, height, price){
+    panelRows.push({ id: nextPanelId++, width: width ?? '', height: height ?? '', price: price ?? '' });
+    renderPanelOptions();
+  }
+  function removePanelOption(id){
+    panelRows = panelRows.filter(s => s.id !== id);
+    if(panelRows.length === 0) addPanelOption('', '', '');
+    else renderPanelOptions();
+  }
+  function renderPanelOptions(){
+    panelOptsBody.innerHTML = '';
+    panelRows.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = s.id;
+      tr.innerHTML = `
+        <td><input type="number" class="in-pw" min="0" step="any" value="${s.width}"></td>
+        <td><input type="number" class="in-ph" min="0" step="any" value="${s.height}"></td>
+        <td><input type="number" class="in-pprice" min="0" step="any" value="${s.price}"></td>
+        <td class="col-del"><button class="btn-del" title="Eliminar medida">✕</button></td>
+      `;
+      tr.querySelector('.in-pw').addEventListener('input', e => { s.width = parseFloat(e.target.value); });
+      tr.querySelector('.in-ph').addEventListener('input', e => { s.height = parseFloat(e.target.value); });
+      tr.querySelector('.in-pprice').addEventListener('input', e => { s.price = parseFloat(e.target.value); });
+      tr.querySelector('.btn-del').addEventListener('click', () => removePanelOption(s.id));
+      panelOptsBody.appendChild(tr);
+    });
+  }
+  document.getElementById('addPanelBtn').addEventListener('click', () => addPanelOption('', '', ''));
+
+  setupModeTabs({
+    stateCheckbox:'multiPanelToggle', singleBtn:'singlePanelToggleBtn', multiBtn:'multiPanelArrowBtn',
+    singleBody:'singlePanelBody', multiBody:'multiPanelBody', tolBlock:'tolBlock2D',
+    tolSlotSingle:'tolSlotSingle2D', tolSlotMulti:'tolSlotMulti2D', unitSlotMulti:'unitsRelocateTarget2D',
+    unitWraps:['unit2DFieldWrap'],
+    unitRestore:[['panelWidthFieldWrap','unit2DFieldWrap']],
+    singleText:'Medida única', multiText:'Varias medidas de plancha'
+  });
+
+  // seed examples
+  addPanelOption(96, 48, 68);
+  addPanelOption(48, 48, 38);
+  addPiece2D('Costado', 24, 16, 4);
+  addPiece2D('Repisa', 32, 12, 3);
+  addPiece2D('Puerta', 18, 28, 2);
+
+  // ---------- ALGORITHMS: 2D rectangle nesting ----------
+
+  function pruneFree(free){
+    const result = [];
+    for(let i = 0; i < free.length; i++){
+      const a = free[i];
+      if(a.w <= 1e-6 || a.h <= 1e-6) continue;
+      let contained = false;
+      for(let j = 0; j < free.length; j++){
+        if(i === j) continue;
+        const b = free[j];
+        if(b.w <= 1e-6 || b.h <= 1e-6) continue;
+        const aInB = a.x >= b.x - 1e-6 && a.y >= b.y - 1e-6 && a.x + a.w <= b.x + b.w + 1e-6 && a.y + a.h <= b.y + b.h + 1e-6;
+        if(aInB){
+          const identical = Math.abs(a.x-b.x)<1e-6 && Math.abs(a.y-b.y)<1e-6 && Math.abs(a.w-b.w)<1e-6 && Math.abs(a.h-b.h)<1e-6;
+          if(identical && i < j) continue;
+          contained = true; break;
+        }
+      }
+      if(!contained) result.push(a);
+    }
+    return result;
+  }
+
+  // Guillotine packing: Best-Area-Fit placement + Shorter-Leftover-Axis split.
+  // Every split is a straight cut across the whole free rectangle — matches how
+  // a table saw or panel saw actually cuts a sheet.
+  function packGuillotine(panelOptions, items, chooseFn, allowRotate, tolerance){
+    let sheets = [];
+
+    function tryPlace(sheet, item){
+      let best = null, bestScore = Infinity, bestRot = false;
+      sheet.free.forEach(fr => {
+        if(item.origW <= fr.w + 1e-9 && item.origH <= fr.h + 1e-9){
+          const leftover = fr.w*fr.h - item.origW*item.origH;
+          if(leftover < bestScore){ bestScore = leftover; best = fr; bestRot = false; }
+        }
+        if(allowRotate && item.origH <= fr.w + 1e-9 && item.origW <= fr.h + 1e-9){
+          const leftover = fr.w*fr.h - item.origW*item.origH;
+          if(leftover < bestScore){ bestScore = leftover; best = fr; bestRot = true; }
         }
       });
-    })();
+      if(!best) return false;
+      const rawW = bestRot ? item.origH : item.origW;
+      const rawH = bestRot ? item.origW : item.origH;
 
-    document.getElementById("team1Name").addEventListener("input", function(e){
-      state.teams[0].name = e.target.value || "Equipo 1";
-      commit();
-    });
-    document.getElementById("team2Name").addEventListener("input", function(e){
-      state.teams[1].name = e.target.value || "Equipo 2";
-      commit();
-    });
+      // La tolerancia (kerf) solo se reserva hacia la derecha/abajo si de verdad
+      // sobra material ahí dentro de este hueco libre. Si la pieza ya llega justo
+      // al borde del hueco (que es el borde real de la plancha o un corte ya hecho),
+      // no hace falta un corte extra. Si sobra menos que la tolerancia completa,
+      // solo se cuenta ese sobrante mínimo — no se exige la tolerancia entera.
+      const marginW = Math.min(tolerance, Math.max(0, best.w - rawW));
+      const marginH = Math.min(tolerance, Math.max(0, best.h - rawH));
+      const iw = rawW + marginW;
+      const ih = rawH + marginH;
 
-    document.querySelectorAll("[data-team][data-delta]").forEach(function(btn){
-      btn.addEventListener("click", function(){
-        var ti = Number(btn.getAttribute("data-team"));
-        var d = Number(btn.getAttribute("data-delta"));
-        state.teams[ti].score = Math.max(0, (state.teams[ti].score||0) + d);
-        commit();
-      });
-    });
+      const placed = { label: item.label, color: item.color, origW: item.origW, origH: item.origH, x: best.x, y: best.y, w: iw, h: ih, rotated: bestRot };
+      sheet.placed.push(placed);
 
-    document.getElementById("addRoundBtn").addEventListener("click", function(){
-      state.rounds.push({
-        id: cryptoId(),
-        question: "Nueva pregunta…",
-        answers: [
-          { text: "Respuesta 1", points: 30, revealed:false },
-          { text: "Respuesta 2", points: 20, revealed:false }
-        ],
-        strikes: 0
-      });
-      commit();
-    });
-
-    function renderStartBlock(){
-      var btn = document.getElementById("toggleStartBtn");
-      var thumb = document.getElementById("startThumb");
-      var status = document.getElementById("startStatus");
-      if(startVisible()){
-        btn.textContent = "▶ Iniciar juego (Enter)";
-        status.textContent = "La pantalla de proyección muestra la pantalla de inicio.";
+      const remW = best.w - iw;
+      const remH = best.h - ih;
+      let rectA, rectB;
+      if(remW < remH){
+        rectA = { x: best.x + iw, y: best.y, w: remW, h: ih };
+        rectB = { x: best.x, y: best.y + ih, w: best.w, h: remH };
+        // Corte 1 ("de repisa"): horizontal, de lado a lado del rectángulo libre actual,
+        // separa la franja superior (altura = ih, ancho completo) del resto.
+        if(remH > 1e-6) sheet.cuts.push({ orient:'H', coord: best.y + ih, from: best.x, to: best.x + best.w });
+        // Corte 2 ("de ajuste"): vertical, sólo dentro de esa franja ya aislada,
+        // separa la pieza de su sobrante (rectA).
+        if(remW > 1e-6) sheet.cuts.push({ orient:'V', coord: best.x + iw, from: best.y, to: best.y + ih });
       } else {
-        btn.textContent = "↩ Volver a la pantalla de inicio";
-        status.textContent = "La pantalla de proyección muestra el tablero.";
+        rectA = { x: best.x + iw, y: best.y, w: remW, h: best.h };
+        rectB = { x: best.x, y: best.y + ih, w: iw, h: remH };
+        // Corte 1 ("de repisa"): vertical, de lado a lado del rectángulo libre actual,
+        // separa la franja izquierda (ancho = iw, alto completo) del resto.
+        if(remW > 1e-6) sheet.cuts.push({ orient:'V', coord: best.x + iw, from: best.y, to: best.y + best.h });
+        // Corte 2 ("de ajuste"): horizontal, sólo dentro de esa franja ya aislada,
+        // separa la pieza de su sobrante (rectB).
+        if(remH > 1e-6) sheet.cuts.push({ orient:'H', coord: best.y + ih, from: best.x, to: best.x + iw });
       }
-      if(startImage){
-        thumb.src = startImage;
-        thumb.style.display = "block";
-      } else {
-        thumb.removeAttribute("src");
-        thumb.style.display = "none";
-      }
+      sheet.free = sheet.free.filter(f => f !== best);
+      if(rectA.w > 1e-6 && rectA.h > 1e-6) sheet.free.push(rectA);
+      if(rectB.w > 1e-6 && rectB.h > 1e-6) sheet.free.push(rectB);
+      return true;
     }
-    window.renderStartBlock = renderStartBlock;
 
-    document.getElementById("toggleStartBtn").addEventListener("click", function(){
-      state.showStart = !startVisible();
-      this.blur();
-      commit();
+    items.forEach(item => {
+      let placedOk = false;
+      for(const sheet of sheets){
+        if(tryPlace(sheet, item)){ placedOk = true; break; }
+      }
+      if(!placedOk){
+        const candidates = panelOptions.filter(o =>
+          (item.origW <= o.width + 1e-9 && item.origH <= o.height + 1e-9) ||
+          (allowRotate && item.origH <= o.width + 1e-9 && item.origW <= o.height + 1e-9)
+        );
+        const chosen = chooseFn(candidates);
+        const sheet = { width: chosen.width, height: chosen.height, price: chosen.price, free: [{x:0,y:0,w:chosen.width,h:chosen.height}], placed: [], cuts: [] };
+        tryPlace(sheet, item);
+        sheets.push(sheet);
+      }
+    });
+    return sheets;
+  }
+
+  // Free packing (MaxRects, Best-Short-Side-Fit): places pieces wherever they fit
+  // best, splitting all overlapping free rectangles into up to 4 new ones. Gives
+  // denser packing but cuts are not guaranteed edge-to-edge — meant for laser/plotter.
+  function packMaxRects(panelOptions, items, chooseFn, allowRotate, tolerance, rule){
+    rule = rule || 'bssf';
+    let sheets = [];
+
+    function splitFree(sheet, placedRect){
+      const newFree = [];
+      sheet.free.forEach(fr => {
+        const overlap = placedRect.x < fr.x+fr.w && placedRect.x+placedRect.w > fr.x &&
+                         placedRect.y < fr.y+fr.h && placedRect.y+placedRect.h > fr.y;
+        if(!overlap){ newFree.push(fr); return; }
+        if(placedRect.x > fr.x) newFree.push({x:fr.x, y:fr.y, w:placedRect.x-fr.x, h:fr.h});
+        if(placedRect.x+placedRect.w < fr.x+fr.w) newFree.push({x:placedRect.x+placedRect.w, y:fr.y, w:(fr.x+fr.w)-(placedRect.x+placedRect.w), h:fr.h});
+        if(placedRect.y > fr.y) newFree.push({x:fr.x, y:fr.y, w:fr.w, h:placedRect.y-fr.y});
+        if(placedRect.y+placedRect.h < fr.y+fr.h) newFree.push({x:fr.x, y:placedRect.y+placedRect.h, w:fr.w, h:(fr.y+fr.h)-(placedRect.y+placedRect.h)});
+      });
+      sheet.free = pruneFree(newFree);
+    }
+
+    // Puntuación de qué tan "bueno" es meter la pieza (rawW x rawH) en el
+    // hueco libre fr, según la regla elegida. Se compara (primary, secondary)
+    // como par — el menor primary gana, y secondary solo desempata.
+    function score(fr, rawW, rawH){
+      const leftW = fr.w - rawW, leftH = fr.h - rawH;
+      if(rule === 'blsf'){        // Best-Long-Side-Fit: prioriza dejar chico el sobrante largo
+        return [Math.max(leftW, leftH), Math.min(leftW, leftH)];
+      } else if(rule === 'baf'){  // Best-Area-Fit: prioriza el hueco con menos área sobrante
+        return [fr.w*fr.h - rawW*rawH, Math.min(leftW, leftH)];
+      } else if(rule === 'bl'){   // Bottom-Left: siempre el hueco más arriba-a-la-izquierda
+        return [fr.y, fr.x];
+      }
+      return [Math.min(leftW, leftH), Math.max(leftW, leftH)]; // bssf (por defecto)
+    }
+
+    function tryPlace(sheet, item){
+      let best = null, bestP = Infinity, bestS = Infinity, bestRot = false;
+      function consider(fr, rawW, rawH, rot){
+        if(rawW > fr.w+1e-9 || rawH > fr.h+1e-9) return;
+        const [p, s] = score(fr, rawW, rawH);
+        if(p < bestP - 1e-9 || (Math.abs(p-bestP) < 1e-9 && s < bestS - 1e-9)){
+          bestP = p; bestS = s; best = fr; bestRot = rot;
+        }
+      }
+      sheet.free.forEach(fr => {
+        consider(fr, item.origW, item.origH, false);
+        if(allowRotate) consider(fr, item.origH, item.origW, true);
+      });
+      if(!best) return false;
+      const rawW = bestRot ? item.origH : item.origW;
+      const rawH = bestRot ? item.origW : item.origH;
+
+      // Mismo criterio que en guillotina: la tolerancia solo se reserva por el
+      // sobrante real disponible en el hueco elegido, nunca más de lo que sobra.
+      const marginW = Math.min(tolerance, Math.max(0, best.w - rawW));
+      const marginH = Math.min(tolerance, Math.max(0, best.h - rawH));
+      const iw = rawW + marginW;
+      const ih = rawH + marginH;
+
+      const placed = { label: item.label, color: item.color, origW: item.origW, origH: item.origH, x: best.x, y: best.y, w: iw, h: ih, rotated: bestRot };
+      sheet.placed.push(placed);
+      splitFree(sheet, placed);
+      return true;
+    }
+
+    items.forEach(item => {
+      let placedOk = false;
+      for(const sheet of sheets){
+        if(tryPlace(sheet, item)){ placedOk = true; break; }
+      }
+      if(!placedOk){
+        const candidates = panelOptions.filter(o =>
+          (item.origW <= o.width + 1e-9 && item.origH <= o.height + 1e-9) ||
+          (allowRotate && item.origH <= o.width + 1e-9 && item.origW <= o.height + 1e-9)
+        );
+        const chosen = chooseFn(candidates);
+        const sheet = { width: chosen.width, height: chosen.height, price: chosen.price, free: [{x:0,y:0,w:chosen.width,h:chosen.height}], placed: [] };
+        tryPlace(sheet, item);
+        sheets.push(sheet);
+      }
+    });
+    return sheets;
+  }
+
+  function sheetsTotalCost(sheets){
+    return sheets.reduce((s, sh) => s + (parseFloat(sh.price) || 0), 0);
+  }
+
+  function optimizeCuts2D(panelOptions, tolerance, pieces, method, allowRotate, priority, searchOpts){
+    let items = [];
+    pieces.forEach(p => {
+      const w = parseFloat(p.width), h = parseFloat(p.height), qty = parseInt(p.qty, 10);
+      if(!w || w <= 0 || !h || h <= 0 || !qty || qty <= 0) return;
+      for(let i = 0; i < qty; i++){
+        items.push({ label: p.label || 'Sin nombre', origW: w, origH: h, color: colorFor2D(p.label) });
+      }
     });
 
-    document.getElementById("clearStartImgBtn").addEventListener("click", function(){
-      startImage = "";
-      saveImage("");
-      if(bc){ try{ bc.postMessage({ type:"startImage", image:"" }); }catch(e){} }
-      renderStartBlock();
-    });
+    if(items.length === 0){
+      throw { message: 'Agrega al menos una pieza con ancho, alto y cantidad válidos.' };
+    }
 
-    document.getElementById("startImgInput").addEventListener("change", function(e){
-      var input = e.target;
-      var f = input.files && input.files[0];
-      if(!f) return;
-      var reader = new FileReader();
-      reader.onload = function(){
-        var img = new Image();
-        img.onload = function(){
-          var max = 1920;
-          var k = Math.min(1, max / Math.max(img.width, img.height));
-          var c = document.createElement("canvas");
-          c.width = Math.round(img.width * k);
-          c.height = Math.round(img.height * k);
-          var ctx = c.getContext("2d");
-          ctx.fillStyle = "#06155a";
-          ctx.fillRect(0, 0, c.width, c.height);
-          ctx.drawImage(img, 0, 0, c.width, c.height);
-          var data = c.toDataURL("image/jpeg", 0.85);
-          startImage = data;
-          var ok = saveImage(data);
-          if(bc){ try{ bc.postMessage({ type:"startImage", image:data }); }catch(err){} }
-          renderStartBlock();
-          if(!ok){
-            alert("La foto se muestra ahora, pero es muy pesada para guardarse en el navegador. Si cierras la página tendrás que elegirla de nuevo; prueba con una foto más ligera.");
+    // Una pieza sola nunca necesita tolerancia extra: si mide justo lo mismo (o casi)
+    // que la plancha, solo debe caber su medida real, sin exigir margen de corte.
+    const fitsTest = it => panelOptions.some(o =>
+      (it.origW <= o.width + 1e-9 && it.origH <= o.height + 1e-9) || (allowRotate && it.origH <= o.width + 1e-9 && it.origW <= o.height + 1e-9)
+    );
+    const bad = items.filter(it => !fitsTest(it));
+    if(bad.length){
+      const names = [...new Set(bad.map(o => o.label))].join(', ');
+      throw { message: `Estas piezas no caben en ninguna medida de plancha disponible${allowRotate ? '' : ' (la veta no permite rotarlas)'}: ${names}.` };
+    }
+
+    // Sort by decreasing area, then by longer side — standard nesting order.
+    if(searchOpts && searchOpts.noise > 0){
+      // Modo "máxima calidad": un orden de piezas ligeramente distinto en cada intento.
+      items.forEach(it => { it.k = it.origW * it.origH * (1 + searchOpts.noise * (Math.random() - 0.5) * 2); });
+      items.sort((a,b) => b.k - a.k);
+    } else {
+      items.sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH) || Math.max(b.origW,b.origH) - Math.max(a.origW,a.origH));
+    }
+
+    const packFn = method === 'guillotine' ? packGuillotine : packMaxRects;
+
+    const strategies = [
+      candidates => candidates.reduce((a,b) => ((b.price/(b.width*b.height)) < (a.price/(a.width*a.height)) ? b : a)), // cheapest per unit area
+      candidates => candidates.reduce((a,b) => ((b.width*b.height) < (a.width*a.height) ? b : a)), // smallest area that fits
+      candidates => candidates.reduce((a,b) => (b.price < a.price ? b : a)), // cheapest absolute price
+      candidates => candidates.reduce((a,b) => ((b.width*b.height) > (a.width*a.height) ? b : a)), // largest area available
+    ];
+
+    // Cuando hay empate entre dejar una pieza como está o rotarla (pasa seguido,
+    // porque el área es la misma), el algoritmo greedy siempre prefiere dejarla
+    // tal cual se capturó — y esa primera decisión cambia todo el acomodo que
+    // viene después. Para no depender de si el usuario escribió "3.5 × 2" o
+    // "2 × 3.5", probamos el empaquetado completo también con todas las piezas
+    // volteadas 90° desde el inicio, y nos quedamos con el resultado que use
+    // menos planchas (o menos costo si empatan en planchas).
+    const orientationVariants = allowRotate ? [items, items.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [items];
+
+    // Para "corte libre" (MaxRects) probamos varias reglas de decisión —
+    // cada una prioriza algo distinto al elegir en qué hueco meter la pieza —
+    // y nos quedamos con la que arme el mejor acomodo. Guillotina usa una
+    // sola regla fija (no aplica aquí).
+    const rules = method === 'guillotine' ? [undefined] : ['bssf', 'blsf', 'baf', 'bl'];
+
+    // Puntuación de un conjunto de planchas: [costo, área] o [área, costo] según la prioridad.
+    const scoreSheets = sheets => {
+      const cost = sheetsTotalCost(sheets);
+      const area = sheets.reduce((s,sh) => s + sh.width * sh.height, 0);
+      return priority === 'cost' ? [cost, area] : [area, cost];
+    };
+    const cmp = (x, y) => {
+      for(let i = 0; i < x.length; i++){
+        if(x[i] < y[i] - 1e-6) return -1;
+        if(x[i] > y[i] + 1e-6) return 1;
+      }
+      return 0;
+    };
+
+    // 1) Búsqueda principal: todas las combinaciones de orientación, regla y estrategia.
+    let candidates2D = [];
+    orientationVariants.forEach(variantItems => {
+      rules.forEach(rule => {
+        strategies.forEach(fn => {
+          const sheets = packFn(panelOptions, variantItems, fn, allowRotate, tolerance, rule);
+          candidates2D.push({ sheets, score: scoreSheets(sheets) });
+        });
+      });
+    });
+    candidates2D.sort((p, q) => cmp(p.score, q.score));
+
+    // 2) Mejora posterior (mezcla de medidas). El acomodo inicial elige la medida de cada
+    // plancha en el momento de abrirla, sin saber qué piezas faltan. Aquí se corrige:
+    // cada plancha se reacomoda en la medida más conveniente, y se prueba juntar pares.
+    const sheetItems = sh => sh.placed.map(p => ({ label: p.label, color: p.color, origW: p.origW, origH: p.origH }));
+    const packSingle = (items, option) => {
+      // Si alguna pieza no cabe de ninguna forma en esta medida, no hay nada que probar.
+      const allFit = items.every(it =>
+        (it.origW <= option.width + 1e-9 && it.origH <= option.height + 1e-9) ||
+        (allowRotate && it.origH <= option.width + 1e-9 && it.origW <= option.height + 1e-9));
+      if(!allFit) return null;
+      const sorted = items.slice().sort((a,b) => (b.origW*b.origH) - (a.origW*a.origH));
+      const variants = allowRotate ? [sorted, sorted.map(it => ({...it, origW: it.origH, origH: it.origW}))] : [sorted];
+      let found = null;
+      variants.forEach(v => rules.forEach(rule => {
+        const res = packFn([option], v, cs => cs[0], allowRotate, tolerance, rule);
+        if(res.length === 1 && (!found || cmp(scoreSheets([res[0]]), scoreSheets([found])) < 0)) found = res[0];
+      }));
+      return found;
+    };
+    const t0 = Date.now();
+    const improve2D = sheets => {
+      sheets = sheets.slice();
+      let improved = true, guard = 0;
+      while(improved && guard++ < 30 && Date.now() - t0 < 4000){
+        improved = false;
+        // a) cada plancha sola, en otra medida
+        for(let i = 0; i < sheets.length && !improved; i++){
+          const cur = scoreSheets([sheets[i]]);
+          const items = sheetItems(sheets[i]);
+          let best = null, bestSc = cur;
+          panelOptions.forEach(opt => {
+            if(opt.width === sheets[i].width && opt.height === sheets[i].height && opt.price === sheets[i].price) return;
+            const r = packSingle(items, opt);
+            if(r){ const sc = scoreSheets([r]); if(cmp(sc, bestSc) < 0){ best = r; bestSc = sc; } }
+          });
+          if(best){ sheets[i] = best; improved = true; }
+        }
+        // b) juntar dos planchas en una sola
+        for(let i = 0; i < sheets.length && !improved; i++){
+          for(let j = i + 1; j < sheets.length && !improved; j++){
+            const cur = scoreSheets([sheets[i], sheets[j]]);
+            const items = sheetItems(sheets[i]).concat(sheetItems(sheets[j]));
+            let best = null, bestSc = cur;
+            panelOptions.forEach(opt => {
+              const r = packSingle(items, opt);
+              if(r){ const sc = scoreSheets([r]); if(cmp(sc, bestSc) < 0){ best = r; bestSc = sc; } }
+            });
+            if(best){ sheets.splice(j, 1); sheets[i] = best; improved = true; }
           }
+        }
+      }
+      return sheets;
+    };
+
+    let bestSheets = null, bestScore = null;
+    const seen = new Set();
+    candidates2D.forEach(cand => {
+      if(seen.size >= 4) return;
+      const key = cand.sheets.map(s => s.width + 'x' + s.height + ':' + s.placed.length).sort().join('|');
+      if(seen.has(key)) return;
+      seen.add(key);
+      const improved = improve2D(cand.sheets);
+      const sc = scoreSheets(improved);
+      if(!bestSheets || cmp(sc, bestScore) < 0){ bestSheets = improved; bestScore = sc; }
+    });
+
+    return bestSheets;
+  }
+
+  // ---------- RENDERING 2D ----------
+
+  function buildSheetSVG(sheet, method){
+    const pad = 22, maxDim = 900;
+    const scale = maxDim / Math.max(sheet.width, sheet.height);
+    const W = sheet.width*scale + pad*2;
+    const H = sheet.height*scale + pad*2;
+    let rects = '';
+    sheet.placed.forEach(p => {
+      const ox = pad + p.x*scale, oy = pad + p.y*scale;
+      // Si la pieza está girada, su hueco en la plancha mide origH×origW (no origW×origH).
+      const footW = p.rotated ? p.origH : p.origW;
+      const footH = p.rotated ? p.origW : p.origH;
+      const iw = footW*scale, ih = footH*scale;
+      rects += `<rect x="${ox.toFixed(2)}" y="${oy.toFixed(2)}" width="${iw.toFixed(2)}" height="${ih.toFixed(2)}" fill="${p.color}" stroke="#2B2E33" stroke-width="0.8"/>`;
+      if(iw > 46 && ih > 20){
+        rects += `<text x="${(ox+iw/2).toFixed(2)}" y="${(oy+ih/2+4).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#fff" text-anchor="middle" font-weight="600">${fmt(p.origW)}×${fmt(p.origH)}</text>`;
+      }
+      if(p.rotated && iw > 20 && ih > 20){
+        rects += `<text x="${(ox+6).toFixed(2)}" y="${(oy+13).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#fff" opacity="0.85">↻</text>`;
+      }
+    });
+
+    let cutLines = '';
+    if(method === 'guillotine' && sheet.cuts && sheet.cuts.length){
+      sheet.cuts.forEach((c, idx) => {
+        const order = idx + 1;
+        let x1, y1, x2, y2, mx, my;
+        if(c.orient === 'H'){
+          x1 = pad + c.from*scale; y1 = pad + c.coord*scale;
+          x2 = pad + c.to*scale;   y2 = y1;
+          mx = x1 + 12; my = y1;
+        } else {
+          x1 = pad + c.coord*scale; y1 = pad + c.from*scale;
+          x2 = x1;                  y2 = pad + c.to*scale;
+          mx = x1; my = y1 + 12;
+        }
+        cutLines += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#3D434B" stroke-width="1.3" stroke-dasharray="5,3"/>`;
+        cutLines += `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="7.5" fill="#3D434B"/>`;
+        cutLines += `<text x="${mx.toFixed(2)}" y="${(my+3).toFixed(2)}" font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#fff" text-anchor="middle" font-weight="700">${order}</text>`;
+      });
+    }
+
+    return `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hatch2d" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <rect width="7" height="7" fill="#EFF0F2"/>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#C4C8CD" stroke-width="3"/>
+        </pattern>
+      </defs>
+      <rect x="${pad}" y="${pad}" width="${(sheet.width*scale).toFixed(2)}" height="${(sheet.height*scale).toFixed(2)}" fill="url(#hatch2d)" stroke="#2B2E33" stroke-width="1.4"/>
+      ${rects}
+      ${cutLines}
+    </svg>`;
+  }
+
+  function render2D(sheets, unit, showCost, method){
+    const currency = '$';
+    errBanner2D.style.display = 'none';
+    const oldBreakdown = document.getElementById('costBreakdownWrap2D');
+    if(oldBreakdown) oldBreakdown.remove();
+
+    const totalPieces = sheets.reduce((s,sh) => s + sh.placed.length, 0);
+    const totalArea = sheets.reduce((s,sh) => s + sh.width*sh.height, 0);
+    const usedArea = sheets.reduce((s,sh) => s + sh.placed.reduce((s2,p) => s2 + p.w*p.h, 0), 0);
+    const wasteArea = totalArea - usedArea;
+    const efficiency = 100 * (usedArea/totalArea);
+    const totalCost = sheetsTotalCost(sheets);
+
+    let cards = `
+      <div class="summary-card accent">
+        <div class="label">Planchas necesarias</div>
+        <div class="value">${sheets.length}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Piezas cortadas</div>
+        <div class="value">${totalPieces}</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Desperdicio de área</div>
+        <div class="value">${fmt(wasteArea)} <span class="unit">${unit}²</span></div>
+      </div>
+      <div class="summary-card ok">
+        <div class="label">Eficiencia de uso</div>
+        <div class="value">${fmt(efficiency)}<span class="unit">%</span></div>
+      </div>`;
+    if(showCost){
+      cards += `
+      <div class="summary-card accent">
+        <div class="label">Costo total</div>
+        <div class="value">${currency}${fmt(totalCost)}</div>
+      </div>`;
+    }
+    summaryGrid2D.innerHTML = cards;
+
+    if(showCost){
+      const groups = {};
+      sheets.forEach(sh => {
+        const key = sh.width + 'x' + sh.height + '|' + sh.price;
+        if(!groups[key]) groups[key] = { width: sh.width, height: sh.height, price: sh.price, count: 0 };
+        groups[key].count++;
+      });
+      const rows = Object.values(groups).sort((a,b) => (b.width*b.height)-(a.width*a.height)).map(g => `
+        <tr><td>${fmt(g.width)} × ${fmt(g.height)} ${unit}</td><td>${g.count}</td><td>${currency}${fmt(g.price)}</td><td>${currency}${fmt(g.count*g.price)}</td></tr>
+      `).join('');
+      const breakdownHtml = `
+        <table class="costBreakdown">
+          <thead><tr><th>Medida usada</th><th>Cantidad</th><th>Precio c/u</th><th>Subtotal</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="3">Total</td><td>${currency}${fmt(totalCost)}</td></tr></tfoot>
+        </table>`;
+      costSlot2D.insertAdjacentHTML('afterend', `<div id="costBreakdownWrap2D">${breakdownHtml}</div>`);
+    }
+
+    sheetsContainer.innerHTML = '';
+    cutlistBody2D.innerHTML = '';
+    sheets.forEach((sheet, i) => {
+      const used = sheet.placed.reduce((s,p) => s + p.w*p.h, 0);
+      const wastePct = 100 * (1 - used/(sheet.width*sheet.height));
+      const div = document.createElement('div');
+      div.className = 'sheet-block';
+      div.innerHTML = `
+        <div class="sheet-head">
+          <span class="sheet-id">PLANCHA ${i+1} / ${sheets.length} — ${fmt(sheet.width)} × ${fmt(sheet.height)} ${unit}${showCost ? ' · ' + currency + fmt(sheet.price) : ''}</span>
+          <span class="sheet-meta">desperdicio ${fmt(wastePct)}%</span>
+        </div>
+        <div class="sheet-svg-wrap">${buildSheetSVG(sheet, method)}</div>
+        ${method === 'guillotine' && sheet.cuts && sheet.cuts.length ? `
+        <div class="cut-order">
+          <div class="cut-order-title">Orden de corte en guillotina (${sheet.cuts.length} cortes)</div>
+          <ol>
+            ${sheet.cuts.map((c,idx) => `<li>${c.orient === 'H' ? 'Horizontal' : 'Vertical'}, a ${c.orient === 'H' ? 'y' : 'x'} = ${fmt(c.coord)} ${unit}, de ${c.orient === 'H' ? 'x' : 'y'} ${fmt(c.from)} a ${fmt(c.to)} ${unit}</li>`).join('')}
+          </ol>
+        </div>` : ''}
+      `;
+      sheetsContainer.appendChild(div);
+
+      sheet.placed.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i+1}</td><td><span class="swatch" style="background:${p.color}"></span>${escapeHtml(p.label)}</td><td>${fmt(p.origW)} ${unit}</td><td>${fmt(p.origH)} ${unit}</td><td>${fmt(p.x)} ${unit}</td><td>${fmt(p.y)} ${unit}</td><td>${p.rotated ? 'Sí' : 'No'}</td>`;
+        cutlistBody2D.appendChild(tr);
+      });
+    });
+
+    const uniqueLabels = [...new Map(sheets.flatMap(sh => sh.placed).map(p => [p.label, p])).values()];
+    const legendHtml = `<div class="legend">` + uniqueLabels.map(p => `<span class="legend-item"><span class="swatch" style="background:${p.color}"></span>${escapeHtml(p.label)}</span>`).join('') +
+      `<span class="legend-item"><span class="swatch" style="background:#C4C8CD;background-image:repeating-linear-gradient(45deg,#C4C8CD,#C4C8CD 2px,#EFF0F2 2px,#EFF0F2 4px)"></span>Desperdicio</span>` +
+      (method === 'guillotine' ? `<span class="legend-item"><span class="swatch" style="background:#3D434B"></span>Línea de corte (número = orden)</span>` : '') +
+      `</div>`;
+    sheetsContainer.insertAdjacentHTML('beforeend', legendHtml);
+
+    resultsSection2D.style.display = 'block';
+  }
+
+  let calc2DRunning = false, calc2DStop = false;
+
+  async function calculate2D(){
+    if(calc2DRunning) return;
+    document.querySelectorAll('#pieces2DBody tr').forEach(tr => tr.classList.remove('row-err'));
+    errBanner2D.style.display = 'none';
+
+    const toleranceRaw = parseFloat(document.getElementById('tolerance2D').value) || 0;
+    const unit = unit2DSelect.value;
+    const toleranceUnit = toleranceUnit2DSelect.value;
+    const tolerance = convert(toleranceRaw, toleranceUnit, unit);
+    const singlePanelPrice = parseFloat(document.getElementById('panelPrice').value) || 0;
+    const showCost = multiPanelToggle.checked || singlePanelPrice > 0;
+    const allowRotate = !grainToggle.checked;
+    const method = document.querySelector('input[name="cutMethod2D"]:checked').value;
+
+    let panelOptions = [];
+    if(multiPanelToggle.checked){
+      panelOptions = panelRows
+        .filter(s => parseFloat(s.width) > 0 && parseFloat(s.height) > 0)
+        .map(s => ({ width: parseFloat(s.width), height: parseFloat(s.height), price: parseFloat(s.price) || 0 }));
+      if(panelOptions.length === 0){
+        errBanner2D.style.display = 'block';
+        errBanner2D.textContent = 'Agrega al menos una medida de plancha válida (ancho y alto mayores a 0) en la tabla de medidas.';
+        return;
+      }
+    } else {
+      const w = parseFloat(document.getElementById('panelWidth').value);
+      const h = parseFloat(document.getElementById('panelHeight').value);
+      if(!w || w <= 0 || !h || h <= 0){
+        errBanner2D.style.display = 'block';
+        errBanner2D.textContent = 'Ingresa un ancho y alto de plancha válidos (mayores a 0).';
+        return;
+      }
+      panelOptions = [{ width: w, height: h, price: singlePanelPrice }];
+    }
+
+    const validPieces = pieceRows2D.filter(p => parseFloat(p.width) > 0 && parseFloat(p.height) > 0 && parseInt(p.qty,10) > 0);
+    if(validPieces.length === 0){
+      errBanner2D.style.display = 'block';
+      errBanner2D.textContent = 'Agrega al menos una pieza con ancho, alto y cantidad mayores a 0.';
+      return;
+    }
+
+    try{
+      const priority2D = document.querySelector('input[name="priority2D"]:checked').value;
+      let sheets = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D);
+      render2D(sheets, unit, showCost, method);
+
+      const quality = document.querySelector('input[name="quality2D"]:checked').value;
+      if(quality === 'max' && method === 'guillotine'){
+        calc2DRunning = true; calc2DStop = false;
+        const budgetMs = parseInt(document.getElementById('qualityTime2D').value, 10) * 1000;
+        const box = document.getElementById('qualityProgress2D');
+        const bar = document.getElementById('qualityBar2D');
+        const txt = document.getElementById('qualityText2D');
+        const stopBtn = document.getElementById('qualityStopBtn2D');
+        const calcBtn = document.getElementById('calc2DBtn');
+        box.style.display = 'block'; stopBtn.style.display = ''; calcBtn.disabled = true;
+
+        const score = s => {
+          const cost = sheetsTotalCost(s), area = s.reduce((a,x) => a + x.width * x.height, 0);
+          return priority2D === 'cost' ? [cost, area] : [area, cost];
         };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(f);
-      input.value = "";
-    });
-
-    // Enter: dentro de un campo confirma lo escrito; fuera de un campo inicia el juego
-    document.addEventListener("keydown", function(e){
-      if(e.key !== "Enter") return;
-      var t = e.target;
-      var tag = t && t.tagName;
-      if(tag === "INPUT"){
-        if(t.type !== "file") t.blur();
-        return;
-      }
-      if(tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") return;
-      if(startVisible()){
-        e.preventDefault();
-        state.showStart = false;
-        commit();
-      }
-    });
-
-    function renderControl(){
-      var t1 = document.getElementById("team1Name");
-      var t2 = document.getElementById("team2Name");
-      if(document.activeElement !== t1) t1.value = state.teams[0].name;
-      if(document.activeElement !== t2) t2.value = state.teams[1].name;
-      document.getElementById("team1Score").textContent = state.teams[0].score;
-      document.getElementById("team2Score").textContent = state.teams[1].score;
-
-      var live = getLiveRound();
-      document.getElementById("potNum").textContent = potForRound(live);
-      renderStartBlock();
-      renderLiveArea(live);
-
-      // si se está escribiendo en un campo de las rondas, no se vuelve a dibujar la lista
-      // (si no, el campo pierde el foco con cada letra)
-      var ae = document.activeElement;
-      var typingInList = ae && ae.tagName === "INPUT" && ae.closest && ae.closest("#roundsList");
-      if(!typingInList) renderRoundsList();
-    }
-
-    function renderLiveArea(round){
-      var area = document.getElementById("liveRoundArea");
-      if(!round){
-        area.innerHTML = '<div class="no-round-msg">Elige una ronda de la lista de la derecha con "Presentar" para empezar.</div>';
-        return;
-      }
-      var html = '';
-      html += '<div class="live-question">' + escapeHtml(round.question || "(sin pregunta)") + '</div>';
-      html += '<button class="btn ' + (round.questionRevealed ? 'btn-outline' : 'btn-gold') + ' btn-sm" id="toggleQuestionBtn" style="width:100%;margin-bottom:12px;">' + (round.questionRevealed ? 'Ocultar pregunta' : '❓ Revelar pregunta') + '</button>';
-      html += '<div class="live-answers">';
-      round.answers.forEach(function(a, idx){
-        html += '<div class="live-answer-row' + (a.revealed ? ' is-revealed' : '') + '">';
-        html += '<span class="num">' + (idx+1) + '</span>';
-        html += '<span>' + escapeHtml(a.text || "—") + '</span>';
-        html += '<span class="pts">' + (Number(a.points)||0) + '</span>';
-        html += '<button class="rev-btn" data-toggle-answer="' + idx + '">' + (a.revealed ? 'Ocultar' : 'Revelar') + '</button>';
-        html += '</div>';
-      });
-      html += '</div>';
-
-      html += '<div class="strikes-row">';
-      html += '<span class="field-label" style="margin:0;">Errores (X)</span>';
-      for(var s=0; s<3; s++){
-        html += '<div class="strike-box' + (s < (round.strikes||0) ? ' on' : '') + '" data-strike-idx="' + s + '">✗</div>';
-      }
-      html += '<button class="btn btn-rojo btn-sm" id="addStrikeBtn">+ X</button>';
-      html += '</div>';
-
-      html += '<div class="assign-row">';
-      html += '<button class="btn btn-gold btn-sm" data-assign="0">Dar bolsa a ' + escapeHtml(state.teams[0].name) + '</button>';
-      html += '<button class="btn btn-gold btn-sm" data-assign="1">Dar bolsa a ' + escapeHtml(state.teams[1].name) + '</button>';
-      html += '</div>';
-
-      html += '<div class="live-actions-row">';
-      html += '<button class="btn btn-outline btn-sm" id="resetRoundBtn">Reiniciar ronda</button>';
-      html += '<button class="btn btn-outline btn-sm" id="clearStrikesBtn">Quitar errores</button>';
-      html += '</div>';
-
-      area.innerHTML = html;
-
-      var tqBtn = document.getElementById("toggleQuestionBtn");
-      if(tqBtn) tqBtn.addEventListener("click", function(){
-        var r = getLiveRound();
-        if(!r) return;
-        r.questionRevealed = !r.questionRevealed;
-        commit(r.questionRevealed ? { reveal:true } : undefined);
-      });
-
-      area.querySelectorAll("[data-toggle-answer]").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          var idx = Number(btn.getAttribute("data-toggle-answer"));
-          var r = getLiveRound();
-          if(!r) return;
-          r.answers[idx].revealed = !r.answers[idx].revealed;
-          var flash = r.answers[idx].revealed;
-          commit(flash ? { reveal:true } : undefined);
-        });
-      });
-
-      function setStrikes(n){
-        var r = getLiveRound();
-        if(!r) return;
-        n = Math.max(0, Math.min(3, n));
-        var prev = r.strikes || 0;
-        r.strikes = n;
-        if(n > prev){ commit({ strikeFlash:true, strikeCount:n }); }
-        else { commit(); }
-      }
-      area.querySelectorAll("[data-strike-idx]").forEach(function(box){
-        box.addEventListener("click", function(){
-          var r = getLiveRound();
-          if(!r) return;
-          var idx = Number(box.getAttribute("data-strike-idx"));
-          if((r.strikes||0) === idx+1) setStrikes(idx); else setStrikes(idx+1);
-        });
-      });
-      var addStrikeBtn = document.getElementById("addStrikeBtn");
-      if(addStrikeBtn) addStrikeBtn.addEventListener("click", function(){
-        var r = getLiveRound();
-        if(r) setStrikes((r.strikes||0) + 1);
-      });
-
-      var assignBtns = area.querySelectorAll("[data-assign]");
-      assignBtns.forEach(function(btn){
-        btn.addEventListener("click", function(){
-          var ti = Number(btn.getAttribute("data-assign"));
-          var r = getLiveRound();
-          if(!r) return;
-          var pot = potForRound(r);
-          state.teams[ti].score = (state.teams[ti].score||0) + pot;
-          commit();
-        });
-      });
-
-      var resetBtn = document.getElementById("resetRoundBtn");
-      if(resetBtn) resetBtn.addEventListener("click", function(){
-        var r = getLiveRound();
-        if(!r) return;
-        r.answers.forEach(function(a){ a.revealed = false; });
-        r.strikes = 0;
-        r.questionRevealed = false;
-        commit();
-      });
-      var clearStrikesBtn = document.getElementById("clearStrikesBtn");
-      if(clearStrikesBtn) clearStrikesBtn.addEventListener("click", function(){
-        var r = getLiveRound();
-        if(!r) return;
-        r.strikes = 0;
-        commit();
-      });
-    }
-
-    function renderRoundsList(){
-      var list = document.getElementById("roundsList");
-      if(state.rounds.length === 0){
-        list.innerHTML = '<div class="empty-state">Aún no hay rondas. Agrega la primera con el botón de abajo.</div>';
-        return;
-      }
-      var html = '';
-      state.rounds.forEach(function(round, ri){
-        var isLive = round.id === state.liveRoundId;
-        html += '<div class="round-card' + (isLive ? ' is-live' : '') + '" data-round-id="' + round.id + '">';
-        html += '<div class="round-card-top">';
-        html += '<span class="round-pill">' + (isLive ? 'EN VIVO' : 'Ronda ' + (ri+1)) + '</span>';
-        html += '<div class="round-card-actions">';
-        html += '<button class="btn btn-gold btn-sm" data-present="' + round.id + '">Presentar</button>';
-        html += '<button class="icon-x" data-delete-round="' + round.id + '" title="Eliminar ronda">✕</button>';
-        html += '</div></div>';
-
-        html += '<input class="text-input" style="margin-bottom:8px;font-weight:700;" data-edit-question="' + round.id + '" value="' + escapeAttr(round.question) + '">';
-
-        round.answers.forEach(function(a, ai){
-          html += '<div class="ans-editor-row">';
-          html += '<input class="text-input" data-edit-answer="' + round.id + '|' + ai + '" value="' + escapeAttr(a.text) + '">';
-          html += '<input class="text-input pts-input" type="number" min="0" data-edit-points="' + round.id + '|' + ai + '" value="' + (Number(a.points)||0) + '">';
-          html += '<button class="icon-x" data-delete-answer="' + round.id + '|' + ai + '" title="Quitar respuesta">✕</button>';
-          html += '</div>';
-        });
-
-        html += '<button class="btn btn-outline btn-sm ans-editor-add" data-add-answer="' + round.id + '"' + (round.answers.length >= 8 ? ' disabled' : '') + '>+ Respuesta</button>';
-        html += '</div>';
-      });
-      list.innerHTML = html;
-
-      list.querySelectorAll("[data-present]").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          state.liveRoundId = btn.getAttribute("data-present");
-          commit();
-        });
-      });
-      list.querySelectorAll("[data-delete-round]").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          var id = btn.getAttribute("data-delete-round");
-          state.rounds = state.rounds.filter(function(r){ return r.id !== id; });
-          if(state.liveRoundId === id) state.liveRoundId = null;
-          commit();
-        });
-      });
-      list.querySelectorAll("[data-edit-question]").forEach(function(inp){
-        inp.addEventListener("input", function(){
-          var id = inp.getAttribute("data-edit-question");
-          var r = findRound(id);
-          if(r){ r.question = inp.value; commit(); }
-        });
-      });
-      list.querySelectorAll("[data-edit-answer]").forEach(function(inp){
-        inp.addEventListener("input", function(){
-          var parts = inp.getAttribute("data-edit-answer").split("|");
-          var r = findRound(parts[0]);
-          if(r){ r.answers[Number(parts[1])].text = inp.value; commit(); }
-        });
-      });
-      list.querySelectorAll("[data-edit-points]").forEach(function(inp){
-        inp.addEventListener("input", function(){
-          var parts = inp.getAttribute("data-edit-points").split("|");
-          var r = findRound(parts[0]);
-          if(r){ r.answers[Number(parts[1])].points = Number(inp.value)||0; commit(); }
-        });
-      });
-      list.querySelectorAll("[data-delete-answer]").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          var parts = btn.getAttribute("data-delete-answer").split("|");
-          var r = findRound(parts[0]);
-          if(r && r.answers.length > 1){ r.answers.splice(Number(parts[1]),1); commit(); }
-        });
-      });
-      list.querySelectorAll("[data-add-answer]").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          var r = findRound(btn.getAttribute("data-add-answer"));
-          if(r && r.answers.length < 8){
-            r.answers.push({ text:"Nueva respuesta", points:10, revealed:false });
-            commit();
+        let best = sheets, bestSc = score(sheets), attempts = 1, improved = false;
+        const t0 = Date.now();
+        try{
+          while(!calc2DStop && Date.now() - t0 < budgetMs){
+            await new Promise(r => setTimeout(r, 0));   // deja respirar a la página
+            const s = optimizeCuts2D(panelOptions, tolerance, validPieces, method, allowRotate, priority2D, { noise: 0.15 + 0.35 * Math.random() });
+            attempts++;
+            const sc = score(s);
+            if(cmpScore(sc, bestSc) < 0){ best = s; bestSc = sc; improved = true; }
+            const el = Date.now() - t0;
+            bar.style.width = Math.min(100, 100 * el / budgetMs) + '%';
+            txt.textContent = 'Buscando un mejor acomodo… ' + Math.round(el/1000) + ' / ' + (budgetMs/1000) + ' s · ' + attempts + ' intentos' + (improved ? ' · ya se encontró uno mejor' : '');
           }
-        });
-      });
-    }
-
-    function findRound(id){
-      for(var i=0;i<state.rounds.length;i++){ if(state.rounds[i].id===id) return state.rounds[i]; }
-      return null;
-    }
-
-    window.renderControl = renderControl;
-    renderControl();
-  }
-
-  // ==================================================================
-  // DISPLAY VIEW RENDER
-  // ==================================================================
-  if(isDisplay){
-    document.getElementById("displayExit").addEventListener("click", function(e){
-      e.preventDefault();
-      location.hash = "";
-      location.reload();
-    });
-
-    var prevReveal = {};
-    var prevQuestion = {};
-    function renderDisplay(){
-      var sc = document.getElementById("startScreen");
-      var si = document.getElementById("startImg");
-      var stt = document.getElementById("startTitle");
-      if(startImage){
-        if(si.getAttribute("src") !== startImage) si.setAttribute("src", startImage);
-        si.style.display = "block";
-        stt.style.display = "none";
+        } finally {
+          bar.style.width = '100%'; stopBtn.style.display = 'none'; calcBtn.disabled = false;
+          calc2DRunning = false;
+        }
+        if(improved){
+          render2D(best, unit, showCost, method);
+          txt.textContent = 'Listo: ' + attempts + ' intentos. Se encontró un acomodo mejor que el del modo rápido.';
+        } else {
+          txt.textContent = 'Listo: ' + attempts + ' intentos. El acomodo rápido ya era el mejor que se encontró.';
+        }
       } else {
-        si.removeAttribute("src");
-        si.style.display = "none";
-        stt.style.display = "block";
+        document.getElementById('qualityProgress2D').style.display = 'none';
       }
-      sc.classList.toggle("on", startVisible());
-
-      document.getElementById("dTeam1Name").textContent = state.teams[0].name;
-      document.getElementById("dTeam2Name").textContent = state.teams[1].name;
-      document.getElementById("dTeam1Score").textContent = state.teams[0].score;
-      document.getElementById("dTeam2Score").textContent = state.teams[1].score;
-
-      var body = document.getElementById("displayBody");
-      var round = getLiveRound();
-
-      if(!round){
-        body.innerHTML = '<div class="board-empty">Esperando la siguiente ronda…</div>';
-        return;
-      }
-
-      var n = round.answers.length;
-      var rows = Math.ceil(n/2);
-      var nextReveal = {};
-      var qShown = round.questionRevealed === true;
-      var html;
-      if(qShown){
-        html = '<div class="board-question' + (prevQuestion[round.id] ? '' : ' flip') + '">' + escapeHtml(round.question || "") + '</div>';
-      } else {
-        html = '<div class="board-question is-hidden">? ? ?</div>';
-      }
-      var nextQuestion = {};
-      nextQuestion[round.id] = qShown;
-      html += '<div class="board-grid" style="grid-template-rows:repeat(' + rows + ',auto)">';
-      for(var i=0;i<n;i++){
-        var a = round.answers[i];
-        var key = round.id + "|" + i;
-        nextReveal[key] = !!a.revealed;
-        var cls = "board-slot";
-        if(a.revealed){ cls += " revealed"; if(!prevReveal[key]) cls += " flip"; }
-        html += '<div class="' + cls + '">';
-        html += '<div class="slot-hidden"><span>' + (i+1) + '</span></div>';
-        html += '<div class="slot-reveal"><div class="slot-text">' + escapeHtml(a.text) + '</div><div class="slot-pts">' + (Number(a.points)||0) + '</div></div>';
-        html += '</div>';
-      }
-      html += '</div>';
-      html += '<div class="total-row"><span class="total-label">TOTAL</span><span class="total-box">' + potForRound(round) + '</span></div>';
-      html += '<div class="strike-indicator">';
-      for(var s2=0; s2<3; s2++){
-        html += '<div class="si-box' + (s2 < (round.strikes||0) ? ' on' : '') + '">X</div>';
-      }
-      html += '</div>';
-      prevReveal = nextReveal;
-      prevQuestion = nextQuestion;
-      body.innerHTML = html;
+    } catch(e){
+      calc2DRunning = false; document.getElementById('calc2DBtn').disabled = false;
+      errBanner2D.style.display = 'block';
+      errBanner2D.textContent = e.message || 'No fue posible calcular la distribución.';
+      resultsSection2D.style.display = 'none';
     }
-
-    var soundHint = document.getElementById("soundHint");
-    function enableSound(){
-      var c = getCtx();
-      if(c && c.state === "suspended"){ try{ c.resume(); }catch(e){} }
-      if(soundHint) soundHint.style.display = "none";
-    }
-    document.addEventListener("click", enableSound);
-    document.addEventListener("keydown", enableSound);
-
-    window.renderDisplay = renderDisplay;
-    renderDisplay();
   }
 
-  // ---------- utils ----------
-  function escapeHtml(s){
-    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
-      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
-    });
+  document.getElementById('calc2DBtn').addEventListener('click', calculate2D);
+  document.getElementById('qualityStopBtn2D').addEventListener('click', () => { calc2DStop = true; });
+
+  // El control de calidad solo aplica a guillotina
+  function updateQualityVisibility(){
+    const m = document.querySelector('input[name="cutMethod2D"]:checked').value;
+    document.getElementById('qualityRow').style.display = m === 'guillotine' ? '' : 'none';
   }
-  function escapeAttr(s){ return escapeHtml(s); }
+  document.querySelectorAll('input[name="cutMethod2D"]').forEach(r => r.addEventListener('change', updateQualityVisibility));
+  updateQualityVisibility();
+
+  document.getElementById('cutlistToggle2D').addEventListener('click', function(){
+    const cutlistTable2DEl = document.getElementById('cutlistTable2D');
+    const isHidden = cutlistTable2DEl.style.display !== 'table';
+    cutlistTable2DEl.style.display = isHidden ? 'table' : 'none';
+    this.textContent = (isHidden ? '▾' : '▸') + ' Ver lista de corte en formato tabla (para imprimir)';
+  });
+
+  // ---------- Ctrl/Cmd+Enter routes to whichever section was last focused ----------
+  let lastActive = 'linear';
+  const section2DEl = document.getElementById('section2D');
+  document.addEventListener('focusin', e => {
+    lastActive = section2DEl.contains(e.target) ? '2d' : 'linear';
+  });
+  document.addEventListener('keydown', e => {
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      if(lastActive === '2d') calculate2D(); else calculate();
+    }
+  });
 
 })();
 </script>
