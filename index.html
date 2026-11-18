@@ -180,6 +180,7 @@
     vertical-align:1px;
   }
   .mode-tab-body{margin-top:12px;}
+  .mode-tab.inactive .mode-tab-body{opacity:.5;}
   .tol-block{margin-top:14px;}
   .group-head{
     margin:52px 0 20px;
@@ -1018,8 +1019,8 @@
   // ---------- Pestañas "única / varias": la pestaña abierta es la que se usa ----------
   // La casilla oculta (multiLengthToggle / multiPanelToggle) solo guarda el modo
   // para que el resto del código lo lea igual que antes.
-  function setupModeTabs(cfg){
-    let mode = 'single', openSingle = true, openMulti = false;
+    function setupModeTabs(cfg){
+    let mode = 'single';
     const el = id => document.getElementById(id);
     const stateBox = el(cfg.stateCheckbox);
     const singleBtn = el(cfg.singleBtn), multiBtn = el(cfg.multiBtn);
@@ -1030,8 +1031,8 @@
     const unitWraps = cfg.unitWraps.map(el);
     const restore = cfg.unitRestore.map(([anchor, unit]) => [el(anchor), el(unit)]);
 
-    function setLabel(btn, text, open, active){
-      btn.textContent = (open ? '▾ ' : '▸ ') + text;
+    function setLabel(btn, text, active){
+      btn.textContent = (active ? '◉ ' : '○ ') + text;
       if(active){
         const badge = document.createElement('span');
         badge.className = 'mode-badge';
@@ -1041,10 +1042,12 @@
     }
     function render(){
       stateBox.checked = (mode === 'multi');
-      singleBody.style.display = openSingle ? '' : 'none';
-      multiBody.style.display = openMulti ? '' : 'none';
-      setLabel(singleBtn, cfg.singleText, openSingle, mode === 'single');
-      setLabel(multiBtn, cfg.multiText, openMulti, mode === 'multi');
+      singleBody.style.display = '';
+      multiBody.style.display = '';
+      singleBody.parentElement.classList.toggle('inactive', mode !== 'single');
+      multiBody.parentElement.classList.toggle('inactive', mode !== 'multi');
+      setLabel(singleBtn, cfg.singleText, mode === 'single');
+      setLabel(multiBtn, cfg.multiText, mode === 'multi');
       if(mode === 'multi'){
         unitWraps.forEach(w => unitSlotMulti.appendChild(w));
         tolMulti.appendChild(tolBlock);
@@ -1053,15 +1056,18 @@
         tolSingle.appendChild(tolBlock);
       }
     }
-    singleBtn.addEventListener('click', () => {
-      if(mode === 'single'){ openSingle = !openSingle; }
-      else { mode = 'single'; openSingle = true; openMulti = false; }
+    function select(newMode){
+      if(mode === newMode) return;
+      mode = newMode;
       render();
-    });
-    multiBtn.addEventListener('click', () => {
-      if(mode === 'multi'){ openMulti = !openMulti; }
-      else { mode = 'multi'; openMulti = true; openSingle = false; }
-      render();
+    }
+    // Las dos pestañas siempre están abiertas. Se elige la que se usa con su
+    // encabezado, o simplemente tocando o escribiendo dentro de ella.
+    singleBtn.addEventListener('click', () => select('single'));
+    multiBtn.addEventListener('click', () => select('multi'));
+    ['click', 'input'].forEach(evt => {
+      singleBody.addEventListener(evt, () => select('single'));
+      multiBody.addEventListener(evt, () => select('multi'));
     });
     render();
   }
