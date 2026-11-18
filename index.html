@@ -547,6 +547,7 @@
     .col-color{display:none;}
   }
 
+  .btn-pdf{margin-left:auto;align-self:center;}
   @media print{
     body{background:#fff;}
     .btn, .btn-add, .btn-del, .cutlist-toggle{display:none !important;}
@@ -687,6 +688,7 @@
   <section id="results">
     <div class="section-head">
       <h2>Resultado: plan de corte</h2>
+      <button type="button" class="btn btn-pdf" id="pdfBtn">Exportar a PDF</button>
     </div>
 
     <div class="summary-grid" id="summaryGrid"></div>
@@ -885,6 +887,7 @@
   <section id="results2D">
     <div class="section-head">
       <h2>Resultado: plano de corte 2D</h2>
+      <button type="button" class="btn btn-pdf" id="pdfBtn2D">Exportar a PDF</button>
     </div>
 
     <div class="summary-grid" id="summaryGrid2D"></div>
@@ -909,6 +912,8 @@
   CALCULADORA DE CORTES · Herramienta de uso general para optimización de corte 1D y 2D (cutting stock problem)
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 (function(){
   const COLORS = ['#2C5F8A','#3D434B','#3B7A57','#8A5FB0','#B0862C','#4A8FA8','#A85236','#5F7A3B','#7A5F8A','#3B8A7A'];
@@ -1419,6 +1424,7 @@
       `<span class="legend-item"><span class="swatch" style="background:#C4C8CD;background-image:repeating-linear-gradient(45deg,#C4C8CD,#C4C8CD 2px,#EFF0F2 2px,#EFF0F2 4px)"></span>Desperdicio</span></div>`;
     tubesContainer.insertAdjacentHTML('beforeend', legendHtml);
 
+    lastLinear = { bins, unit, showCost, tolerance };
     resultsSection.style.display = 'block';
   }
 
@@ -2098,6 +2104,7 @@
       `</div>`;
     sheetsContainer.insertAdjacentHTML('beforeend', legendHtml);
 
+    lastPlan2D = { sheets, unit, showCost, method, tolerance: plan2DMeta.tolerance, allowRotate: plan2DMeta.allowRotate };
     resultsSection2D.style.display = 'block';
   }
 
@@ -2116,6 +2123,7 @@
     const showCost = multiPanelToggle.checked || singlePanelPrice > 0;
     const allowRotate = !grainToggle.checked;
     const method = document.querySelector('input[name="cutMethod2D"]:checked').value;
+    plan2DMeta = { tolerance, allowRotate };
 
     let panelOptions = [];
     if(multiPanelToggle.checked){
@@ -2216,6 +2224,438 @@
     cutlistTable2DEl.style.display = isHidden ? 'table' : 'none';
     this.textContent = (isHidden ? '▾' : '▸') + ' Ver lista de corte en formato tabla (para imprimir)';
   });
+
+  // ============================================================
+  // EXPORTAR A PDF — usa jsPDF + autoTable (cargados desde cdnjs)
+  // Los gráficos se dibujan con vectores a partir de los datos del
+  // cálculo, así se ven nítidos al imprimir y no dependen de fuentes web.
+  // ============================================================
+
+  let lastLinear = null;   // {bins, unit, showCost, tolerance}
+  let lastPlan2D = null;   // {sheets, unit, showCost, method, tolerance, allowRotate}
+  let plan2DMeta = { tolerance: 0, allowRotate: true };
+
+  const PDFSTYLE = {
+    margin: 14,
+    ink: [43, 46, 51], soft: [92, 96, 104], faint: [141, 146, 154],
+    line: [211, 213, 217], card: [240, 241, 243],
+    waste: [239, 240, 242], hatch: [196, 200, 205], tol: [150, 153, 158]
+  };
+
+  // La fuente estándar del PDF (Helvetica) solo trae caracteres Latin-1.
+  function pdfSafe(s){
+    return String(s == null ? '' : s).replace(/[^\u0020-\u00FF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g, '?');
+  }
+
+  function pdfRgb(hex){
+    let h = String(hex || '#888888').replace('#', '');
+    if(h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    if(isNaN(n)) return [136, 136, 136];
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  function pdfEnsureLibs(){
+    if(window.jspdf && window.jspdf.jsPDF) return true;
+    alert('No se pudo cargar la librería para crear PDF. Revisa tu conexión a internet y recarga la página.');
+    return false;
+  }
+
+  function pdfNewDoc(){
+    const { jsPDF } = window.jspdf;
+    return new jsPDF({ unit: 'mm', format: 'letter' });
+  }
+
+  function pdfDateStr(){
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  function pdfTitle(doc, title, lines){
+    const m = PDFSTYLE.margin, W = doc.internal.pageSize.getWidth();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(...PDFSTYLE.ink);
+    doc.text(pdfSafe(title), m, m + 6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...PDFSTYLE.soft);
+    let y = m + 12;
+    lines.forEach(l => { doc.text(pdfSafe(l), m, y); y += 4.6; });
+    doc.setDrawColor(...PDFSTYLE.ink); doc.setLineWidth(0.5); doc.line(m, y, W - m, y);
+    return y + 6;
+  }
+
+  function pdfSummary(doc, y, cards){
+    const m = PDFSTYLE.margin, W = doc.internal.pageSize.getWidth() - 2 * m;
+    const gap = 3, cw = (W - gap * (cards.length - 1)) / cards.length, ch = 17;
+    cards.forEach((c, i) => {
+      const x = m + i * (cw + gap);
+      doc.setFillColor(...PDFSTYLE.card); doc.setDrawColor(...PDFSTYLE.line); doc.setLineWidth(0.2);
+      doc.roundedRect(x, y, cw, ch, 1.5, 1.5, 'FD');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...PDFSTYLE.soft);
+      doc.text(pdfSafe(c.label).toUpperCase(), x + 3, y + 5.5);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...(c.color || PDFSTYLE.ink));
+      let fs = 13; doc.setFontSize(fs);
+      const txt = pdfSafe(c.value);
+      while(fs > 7 && doc.getTextWidth(txt) > cw - 6){ fs -= 0.5; doc.setFontSize(fs); }
+      doc.text(txt, x + 3, y + 13);
+    });
+    return y + ch + 6;
+  }
+
+  // Rectángulo con rayado diagonal (desperdicio), recortado a mano al rectángulo.
+  function pdfHatchRect(doc, x, y, w, h){
+    doc.setFillColor(...PDFSTYLE.waste); doc.rect(x, y, w, h, 'F');
+    doc.setDrawColor(...PDFSTYLE.hatch); doc.setLineWidth(0.35);
+    const step = 1.8;
+    for(let a = x - h; a < x + w; a += step){
+      const t0 = Math.max(0, x - a), t1 = Math.min(h, x + w - a);
+      if(t1 > t0) doc.line(a + t0, y + h - t0, a + t1, y + h - t1);
+    }
+  }
+
+  // Ajusta el tamaño de letra para que el texto quepa; devuelve true si cupo.
+  function pdfFitText(doc, text, maxW, size, minSize){
+    doc.setFontSize(size);
+    while(size > minSize && doc.getTextWidth(text) > maxW){ size -= 0.5; doc.setFontSize(size); }
+    return doc.getTextWidth(text) <= maxW;
+  }
+
+  // Leyenda con cuadritos de color; hace salto de línea si no cabe.
+  function pdfLegend(doc, y, entries){
+    const m = PDFSTYLE.margin, maxX = doc.internal.pageSize.getWidth() - m;
+    let x = m;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    entries.forEach(e => {
+      const txt = pdfSafe(e.text);
+      const need = 6 + doc.getTextWidth(txt) + 6;
+      if(x + need > maxX){ x = m; y += 5.5; }
+      if(e.hatch){ pdfHatchRect(doc, x, y - 3, 3.6, 3.6); doc.setDrawColor(...PDFSTYLE.faint); doc.setLineWidth(0.2); doc.rect(x, y - 3, 3.6, 3.6, 'S'); }
+      else { doc.setFillColor(...e.color); doc.rect(x, y - 3, 3.6, 3.6, 'F'); }
+      doc.setTextColor(...PDFSTYLE.ink);
+      doc.text(txt, x + 5.2, y);
+      x += need;
+    });
+    return y + 7;
+  }
+
+  function pdfFooters(doc, label){
+    const total = doc.internal.getNumberOfPages();
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), m = PDFSTYLE.margin;
+    for(let i = 1; i <= total; i++){
+      doc.setPage(i);
+      doc.setDrawColor(...PDFSTYLE.line); doc.setLineWidth(0.2); doc.line(m, H - 11, W - m, H - 11);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...PDFSTYLE.faint);
+      doc.text(pdfSafe(label), m, H - 7);
+      doc.text('Página ' + i + ' de ' + total, W - m, H - 7, { align: 'right' });
+    }
+  }
+
+  const PDF_TABLE_BASE = {
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 1.8, textColor: PDFSTYLE.ink, lineColor: PDFSTYLE.line, lineWidth: 0.2 },
+    headStyles: { fillColor: PDFSTYLE.ink, textColor: [255, 255, 255], fontStyle: 'bold' },
+    footStyles: { fillColor: [231, 232, 235], textColor: PDFSTYLE.ink, fontStyle: 'bold' }
+  };
+
+  // Tabla de lista de corte con cuadrito de color en la columna de la pieza.
+  function pdfCutTable(doc, startY, head, body, rowColors, rowShade, pieceCol, opts){
+    const m = PDFSTYLE.margin;
+    doc.autoTable(Object.assign({}, PDF_TABLE_BASE, {
+      startY, head: [head], body,
+      margin: { left: m, right: m, bottom: 16 },
+      didParseCell: d => {
+        if(d.section !== 'body') return;
+        if(rowShade[d.row.index]) d.cell.styles.fillColor = PDFSTYLE.card;
+        if(d.column.index === pieceCol) d.cell.styles.cellPadding = { top: 1.6, bottom: 1.6, left: 7, right: 2 };
+      },
+      didDrawCell: d => {
+        if(d.section === 'body' && d.column.index === pieceCol){
+          doc.setFillColor(...rowColors[d.row.index]);
+          doc.rect(d.cell.x + 2, d.cell.y + d.cell.height / 2 - 1.6, 3.2, 3.2, 'F');
+        }
+      }
+    }, opts || {}));
+    return doc.lastAutoTable.finalY;
+  }
+
+  // ---------------- PDF: cortes lineales ----------------
+
+  function pdfDrawBar(doc, x, y, w, bin, unit, tolerance){
+    const h = 11, stock = bin.stockLength, sc = w / stock;
+    let cx = x;
+    bin.items.forEach((item, idx) => {
+      const isLast = idx === bin.items.length - 1;
+      const iw = item.length * sc;
+      doc.setFillColor(...pdfRgb(item.color)); doc.setDrawColor(...PDFSTYLE.ink); doc.setLineWidth(0.15);
+      doc.rect(cx, y, iw, h, 'FD');
+      const txt = fmt(item.length);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+      if(pdfFitText(doc, txt, iw - 1.2, 7, 5)) doc.text(txt, cx + iw / 2, y + h / 2 + 1, { align: 'center' });
+      cx += iw;
+      if(!isLast){
+        const tw = tolerance * sc;
+        if(tw > 0.05){ doc.setFillColor(...PDFSTYLE.tol); doc.rect(cx, y, tw, h, 'F'); }
+        cx += tw;
+      }
+    });
+    const remW = bin.remaining * sc;
+    if(remW > 0.1) pdfHatchRect(doc, cx, y, remW, h);
+    doc.setDrawColor(...PDFSTYLE.ink); doc.setLineWidth(0.4); doc.rect(x, y, w, h, 'S');
+
+    // cota con la longitud total
+    const dy = y + h + 2.5;
+    doc.setLineWidth(0.25);
+    doc.line(x, dy, x + w, dy);
+    doc.line(x, dy - 1.2, x, dy + 1.2); doc.line(x + w, dy - 1.2, x + w, dy + 1.2);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...PDFSTYLE.soft);
+    doc.text(pdfSafe(fmt(stock) + ' ' + unit), x + w / 2, dy + 4, { align: 'center' });
+    return dy + 6;
+  }
+
+  function exportLinearPDF(){
+    if(!lastLinear || !pdfEnsureLibs()) return;
+    const { bins, unit, showCost, tolerance } = lastLinear;
+    const doc = pdfNewDoc(), m = PDFSTYLE.margin, currency = '$';
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    const cw = W - 2 * m;
+    const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    let y = pdfTitle(doc, 'Plan de corte — Cortes lineales', [
+      'Fecha: ' + fecha,
+      'Unidad: ' + unit + '   ·   Tolerancia por corte: ' + fmt(tolerance) + ' ' + unit
+    ]);
+
+    const totalPieces = bins.reduce((s, b) => s + b.items.length, 0);
+    const totalStock = bins.reduce((s, b) => s + b.stockLength, 0);
+    const totalWaste = bins.reduce((s, b) => s + b.remaining, 0);
+    const efficiency = 100 * (1 - totalWaste / totalStock);
+    const totalCost = binsTotalCost(bins);
+
+    const cards = [
+      { label: 'Barras necesarias', value: String(bins.length) },
+      { label: 'Piezas cortadas', value: String(totalPieces) },
+      { label: 'Desperdicio total', value: fmt(totalWaste) + ' ' + unit },
+      { label: 'Eficiencia de uso', value: fmt(efficiency) + '%', color: [76, 107, 84] }
+    ];
+    if(showCost) cards.push({ label: 'Costo total', value: currency + fmt(totalCost) });
+    y = pdfSummary(doc, y, cards);
+
+    if(showCost){
+      const groups = {};
+      bins.forEach(b => {
+        const key = b.stockLength + '|' + b.price;
+        if(!groups[key]) groups[key] = { length: b.stockLength, price: b.price, count: 0 };
+        groups[key].count++;
+      });
+      const rows = Object.values(groups).sort((a, b) => b.length - a.length)
+        .map(g => [fmt(g.length) + ' ' + unit, String(g.count), currency + fmt(g.price), currency + fmt(g.count * g.price)]);
+      doc.autoTable(Object.assign({}, PDF_TABLE_BASE, {
+        startY: y,
+        head: [['Longitud usada', 'Cantidad', 'Precio c/u', 'Subtotal']],
+        body: rows,
+        foot: [[{ content: 'Total', colSpan: 3, styles: { halign: 'right' } }, currency + fmt(totalCost)]],
+        margin: { left: m, right: m }
+      }));
+      y = doc.lastAutoTable.finalY + 7;
+    }
+
+    // leyenda
+    const labels = [...new Map(bins.flatMap(b => b.items).map(it => [it.label, it])).values()];
+    const legend = labels.map(it => ({ color: pdfRgb(it.color), text: it.label }));
+    legend.push({ hatch: true, text: 'Desperdicio' });
+    legend.push({ color: PDFSTYLE.tol, text: 'Tolerancia de corte' });
+    y = pdfLegend(doc, y + 2, legend) + 2;
+
+    // gráficos por barra
+    bins.forEach((bin, i) => {
+      if(y + 28 > H - 16){ doc.addPage(); y = m; }
+      const used = bin.stockLength - bin.remaining;
+      const wastePct = 100 * bin.remaining / bin.stockLength;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...PDFSTYLE.ink);
+      doc.text(pdfSafe('BARRA ' + (i + 1) + ' / ' + bins.length + ' — ' + fmt(bin.stockLength) + ' ' + unit + (showCost ? ' · ' + currency + fmt(bin.price) : '')), m, y + 3);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...PDFSTYLE.soft);
+      doc.text(pdfSafe('usado ' + fmt(used) + ' ' + unit + ' · desperdicio ' + fmt(bin.remaining) + ' ' + unit + ' (' + fmt(wastePct) + '%)'), W - m, y + 3, { align: 'right' });
+      y = pdfDrawBar(doc, m, y + 5.5, cw, bin, unit, tolerance) + 3;
+    });
+
+    // tabla lista de corte
+    if(y + 30 > H - 16){ doc.addPage(); y = m; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...PDFSTYLE.ink);
+    doc.text('Lista de corte', m, y + 4);
+    const body = [], rowColors = [], rowShade = [];
+    bins.forEach((bin, i) => {
+      let cum = 0;
+      bin.items.forEach((item, idx) => {
+        if(idx > 0) cum += tolerance;
+        cum += item.length;
+        body.push([String(i + 1), pdfSafe(item.label), fmt(item.length) + ' ' + unit, fmt(cum) + ' ' + unit]);
+        rowColors.push(pdfRgb(item.color));
+        rowShade.push(i % 2 === 1);
+      });
+    });
+    pdfCutTable(doc, y + 7, ['Barra #', 'Pieza', 'Longitud', 'Posición acumulada'], body, rowColors, rowShade, 1);
+
+    pdfFooters(doc, 'Calculadora de cortes · Plan de corte lineal');
+    doc.save('plan-de-cortes-lineales-' + pdfDateStr() + '.pdf');
+  }
+
+  // ---------------- PDF: cortes en plano ----------------
+
+  function pdfDrawSheet(doc, x, y, boxW, boxH, sheet, method, unit){
+    const sc = Math.min(boxW / sheet.width, boxH / sheet.height);
+    const dw = sheet.width * sc, dh = sheet.height * sc;
+    const ox = x + (boxW - dw) / 2, oy = y;
+
+    pdfHatchRect(doc, ox, oy, dw, dh);
+    sheet.placed.forEach(p => {
+      const fw = p.rotated ? p.origH : p.origW;
+      const fh = p.rotated ? p.origW : p.origH;
+      const px = ox + p.x * sc, py = oy + p.y * sc, pw = fw * sc, ph = fh * sc;
+      doc.setFillColor(...pdfRgb(p.color)); doc.setDrawColor(...PDFSTYLE.ink); doc.setLineWidth(0.15);
+      doc.rect(px, py, pw, ph, 'FD');
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+      const dims = fmt(p.origW) + '×' + fmt(p.origH);
+      if(pdfFitText(doc, dims, pw - 1.5, 6.5, 4.5) && ph > 3.2){
+        doc.text(pdfSafe(dims), px + pw / 2, py + ph / 2 + 0.8, { align: 'center' });
+      }
+      if(p.rotated && pw > 6 && ph > 6){
+        doc.setFontSize(5.5); doc.text('R', px + 1.2, py + 2.6);
+      }
+    });
+    doc.setDrawColor(...PDFSTYLE.ink); doc.setLineWidth(0.4); doc.rect(ox, oy, dw, dh, 'S');
+
+    if(method === 'guillotine' && sheet.cuts && sheet.cuts.length){
+      doc.setDrawColor(61, 67, 75); doc.setLineWidth(0.3);
+      sheet.cuts.forEach((c, idx) => {
+        let x1, y1, x2, y2, mx, my;
+        if(c.orient === 'H'){ x1 = ox + c.from * sc; y1 = oy + c.coord * sc; x2 = ox + c.to * sc; y2 = y1; mx = x1 + 3; my = y1; }
+        else { x1 = ox + c.coord * sc; y1 = oy + c.from * sc; x2 = x1; y2 = oy + c.to * sc; mx = x1; my = y1 + 3; }
+        doc.setLineDashPattern([1.6, 1], 0);
+        doc.line(x1, y1, x2, y2);
+        doc.setLineDashPattern([], 0);
+        doc.setFillColor(61, 67, 75); doc.circle(mx, my, 1.9, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+        pdfFitText(doc, String(idx + 1), 3, 5.5, 3.5);
+        doc.text(String(idx + 1), mx, my + 0.8, { align: 'center' });
+      });
+    }
+
+    // cotas
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...PDFSTYLE.soft);
+    doc.text(pdfSafe(fmt(sheet.width) + ' ' + unit), ox + dw / 2, oy + dh + 4, { align: 'center' });
+    const hTxt = pdfSafe(fmt(sheet.height) + ' ' + unit);
+    doc.text(hTxt, ox - 1.8, oy + dh / 2 + doc.getTextWidth(hTxt) / 2, { angle: 90 });
+    return oy + dh + 6;
+  }
+
+  function exportPlan2DPDF(){
+    if(!lastPlan2D || !pdfEnsureLibs()) return;
+    const { sheets, unit, showCost, method, tolerance, allowRotate } = lastPlan2D;
+    const doc = pdfNewDoc(), m = PDFSTYLE.margin, currency = '$';
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    const cw = W - 2 * m;
+    const fecha = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    const methodName = method === 'guillotine' ? 'Guillotina (cortes de lado a lado)' : 'MaxRects (acomodo libre)';
+
+    let y = pdfTitle(doc, 'Plan de corte — Cortes en plano', [
+      'Fecha: ' + fecha,
+      'Unidad: ' + unit + '   ·   Tolerancia por corte: ' + fmt(tolerance) + ' ' + unit,
+      'Método: ' + methodName + '   ·   Rotación de piezas: ' + (allowRotate ? 'permitida' : 'bloqueada (respeta la veta)')
+    ]);
+
+    const totalPieces = sheets.reduce((s, sh) => s + sh.placed.length, 0);
+    const totalArea = sheets.reduce((s, sh) => s + sh.width * sh.height, 0);
+    const usedArea = sheets.reduce((s, sh) => s + sh.placed.reduce((s2, p) => s2 + p.w * p.h, 0), 0);
+    const totalCost = sheetsTotalCost(sheets);
+    const cards = [
+      { label: 'Planchas necesarias', value: String(sheets.length) },
+      { label: 'Piezas cortadas', value: String(totalPieces) },
+      { label: 'Desperdicio de área', value: fmt(totalArea - usedArea) + ' ' + unit + '²' },
+      { label: 'Eficiencia de uso', value: fmt(100 * usedArea / totalArea) + '%', color: [76, 107, 84] }
+    ];
+    if(showCost) cards.push({ label: 'Costo total', value: currency + fmt(totalCost) });
+    y = pdfSummary(doc, y, cards);
+
+    if(showCost){
+      const groups = {};
+      sheets.forEach(sh => {
+        const key = sh.width + 'x' + sh.height + '|' + sh.price;
+        if(!groups[key]) groups[key] = { width: sh.width, height: sh.height, price: sh.price, count: 0 };
+        groups[key].count++;
+      });
+      const rows = Object.values(groups).sort((a, b) => (b.width * b.height) - (a.width * a.height))
+        .map(g => [fmt(g.width) + ' × ' + fmt(g.height) + ' ' + unit, String(g.count), currency + fmt(g.price), currency + fmt(g.count * g.price)]);
+      doc.autoTable(Object.assign({}, PDF_TABLE_BASE, {
+        startY: y,
+        head: [['Medida usada', 'Cantidad', 'Precio c/u', 'Subtotal']],
+        body: rows,
+        foot: [[{ content: 'Total', colSpan: 3, styles: { halign: 'right' } }, currency + fmt(totalCost)]],
+        margin: { left: m, right: m }
+      }));
+      y = doc.lastAutoTable.finalY + 7;
+    }
+
+    const labels = [...new Map(sheets.flatMap(sh => sh.placed).map(p => [p.label, p])).values()];
+    const legend = labels.map(p => ({ color: pdfRgb(p.color), text: p.label }));
+    legend.push({ hatch: true, text: 'Desperdicio' });
+    if(method === 'guillotine') legend.push({ color: [61, 67, 75], text: 'Línea de corte (número = orden)' });
+    if(sheets.some(sh => sh.placed.some(p => p.rotated))) legend.push({ color: PDFSTYLE.faint, text: 'R = pieza rotada' });
+    y = pdfLegend(doc, y + 2, legend) + 3;
+
+    // una plancha tras otra
+    sheets.forEach((sheet, i) => {
+      const natural = (cw - 8) * sheet.height / sheet.width;
+      let boxH = Math.min(175, H - y - 34);
+      if(boxH < Math.min(natural, 90)){ doc.addPage(); y = m; boxH = Math.min(175, H - y - 34); }
+
+      const used = sheet.placed.reduce((s, p) => s + p.w * p.h, 0);
+      const wastePct = 100 * (1 - used / (sheet.width * sheet.height));
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...PDFSTYLE.ink);
+      doc.text(pdfSafe('PLANCHA ' + (i + 1) + ' / ' + sheets.length + ' — ' + fmt(sheet.width) + ' × ' + fmt(sheet.height) + ' ' + unit + (showCost ? ' · ' + currency + fmt(sheet.price) : '')), m, y + 3);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...PDFSTYLE.soft);
+      doc.text(pdfSafe('desperdicio ' + fmt(wastePct) + '%'), W - m, y + 3, { align: 'right' });
+
+      y = pdfDrawSheet(doc, m + 8, y + 6, cw - 8, boxH - 6, sheet, method, unit) + 3;
+
+      if(method === 'guillotine' && sheet.cuts && sheet.cuts.length){
+        const body = sheet.cuts.map((c, idx) => [
+          String(idx + 1),
+          c.orient === 'H' ? 'Horizontal' : 'Vertical',
+          (c.orient === 'H' ? 'y' : 'x') + ' = ' + fmt(c.coord) + ' ' + unit,
+          (c.orient === 'H' ? 'x' : 'y') + ' ' + fmt(c.from) + ' a ' + fmt(c.to) + ' ' + unit
+        ]);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...PDFSTYLE.ink);
+        doc.text('Orden de corte en guillotina (' + sheet.cuts.length + ' cortes)', m, y + 2);
+        doc.autoTable(Object.assign({}, PDF_TABLE_BASE, {
+          startY: y + 4, head: [['#', 'Tipo', 'Posición', 'Tramo']], body,
+          styles: Object.assign({}, PDF_TABLE_BASE.styles, { fontSize: 7.5, cellPadding: 1.2 }),
+          margin: { left: m, right: m, bottom: 16 }
+        }));
+        y = doc.lastAutoTable.finalY + 8;
+      } else {
+        y += 6;
+      }
+    });
+
+    // tabla lista de corte
+    doc.addPage();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...PDFSTYLE.ink);
+    doc.text('Lista de corte', m, m + 4);
+    const body = [], rowColors = [], rowShade = [];
+    sheets.forEach((sheet, i) => {
+      sheet.placed.forEach(p => {
+        body.push([String(i + 1), pdfSafe(p.label), fmt(p.origW) + ' ' + unit, fmt(p.origH) + ' ' + unit, fmt(p.x) + ' ' + unit, fmt(p.y) + ' ' + unit, p.rotated ? 'Sí' : 'No']);
+        rowColors.push(pdfRgb(p.color));
+        rowShade.push(i % 2 === 1);
+      });
+    });
+    pdfCutTable(doc, m + 7, ['Plancha #', 'Pieza', 'Ancho', 'Alto', 'Posición X', 'Posición Y', 'Rotada'], body, rowColors, rowShade, 1);
+
+    pdfFooters(doc, 'Calculadora de cortes · Plan de corte en plano');
+    doc.save('plan-de-cortes-plano-' + pdfDateStr() + '.pdf');
+  }
+
+  document.getElementById('pdfBtn').addEventListener('click', exportLinearPDF);
+  document.getElementById('pdfBtn2D').addEventListener('click', exportPlan2DPDF);
 
   // ---------- Ctrl/Cmd+Enter routes to whichever section was last focused ----------
   let lastActive = 'linear';
